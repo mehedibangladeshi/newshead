@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
+
 import '../models/news_article.dart';
+import 'article_cache.dart';
 
 List<NewsArticle> parseArticles(String jsonString) {
   final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
@@ -28,4 +31,26 @@ List<NewsArticle> parseArticles(String jsonString) {
 
 List<NewsArticle> articlesForCategory(List<NewsArticle> all, String category) {
   return all.where((a) => a.category == category).toList();
+}
+
+Future<List<NewsArticle>> fetchArticles({
+  required Uri sourceUrl,
+  required http.Client client,
+  required ArticleCache cache,
+}) async {
+  try {
+    final response = await client.get(sourceUrl);
+    if (response.statusCode == 200) {
+      await cache.write(response.body);
+      return parseArticles(response.body);
+    }
+  } catch (_) {
+    // Fall through to the cache below.
+  }
+
+  final cached = await cache.read();
+  if (cached != null) {
+    return parseArticles(cached);
+  }
+  return [];
 }
