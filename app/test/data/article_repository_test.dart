@@ -88,13 +88,15 @@ void main() {
     final client = MockClient((request) async => http.Response(_validJson, 200));
     final cache = InMemoryArticleCache();
 
-    final articles = await fetchArticles(
+    final result = await fetchArticles(
       sourceUrl: Uri.parse('https://example.com/articles.json'),
       client: client,
       cache: cache,
     );
 
-    expect(articles.length, 2);
+    expect(result.articles.length, 2);
+    expect(result.rawBody, _validJson);
+    expect(result.fromNetwork, isTrue);
     expect(cache.stored, _validJson);
   });
 
@@ -102,39 +104,42 @@ void main() {
     final client = MockClient((request) async => throw Exception('network down'));
     final cache = InMemoryArticleCache(_validJson);
 
-    final articles = await fetchArticles(
+    final result = await fetchArticles(
       sourceUrl: Uri.parse('https://example.com/articles.json'),
       client: client,
       cache: cache,
     );
 
-    expect(articles.length, 2);
+    expect(result.articles.length, 2);
+    expect(result.fromNetwork, isFalse);
   });
 
   test('fetchArticles falls back to the cache on a non-200 response', () async {
     final client = MockClient((request) async => http.Response('error', 500));
     final cache = InMemoryArticleCache(_validJson);
 
-    final articles = await fetchArticles(
+    final result = await fetchArticles(
       sourceUrl: Uri.parse('https://example.com/articles.json'),
       client: client,
       cache: cache,
     );
 
-    expect(articles.length, 2);
+    expect(result.articles.length, 2);
+    expect(result.fromNetwork, isFalse);
   });
 
   test('fetchArticles returns an empty list when there is no cache either', () async {
     final client = MockClient((request) async => throw Exception('network down'));
     final cache = InMemoryArticleCache();
 
-    final articles = await fetchArticles(
+    final result = await fetchArticles(
       sourceUrl: Uri.parse('https://example.com/articles.json'),
       client: client,
       cache: cache,
     );
 
-    expect(articles, isEmpty);
+    expect(result.articles, isEmpty);
+    expect(result.fromNetwork, isFalse);
   });
 
   test('fetchArticles returns an empty list instead of throwing when the '
@@ -142,13 +147,13 @@ void main() {
     final client = MockClient((request) async => throw Exception('network down'));
     final cache = InMemoryArticleCache('this is not valid json {{{');
 
-    final articles = await fetchArticles(
+    final result = await fetchArticles(
       sourceUrl: Uri.parse('https://example.com/articles.json'),
       client: client,
       cache: cache,
     );
 
-    expect(articles, isEmpty);
+    expect(result.articles, isEmpty);
   });
 
   test('fetchArticles returns the freshly parsed articles even when caching '
@@ -156,13 +161,14 @@ void main() {
     final client = MockClient((request) async => http.Response(_validJson, 200));
     final cache = ThrowingWriteArticleCache();
 
-    final articles = await fetchArticles(
+    final result = await fetchArticles(
       sourceUrl: Uri.parse('https://example.com/articles.json'),
       client: client,
       cache: cache,
     );
 
-    expect(articles.length, 2);
-    expect(articles[0].id, 'a1');
+    expect(result.articles.length, 2);
+    expect(result.articles[0].id, 'a1');
+    expect(result.fromNetwork, isTrue);
   });
 }

@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The debug/profile manifests grant this automatically for Flutter
+         tooling, but release builds only get it if it's declared here. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="NewsHead"
         android:name="${applicationName}"

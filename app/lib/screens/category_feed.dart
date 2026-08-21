@@ -7,8 +7,14 @@ import 'article_web_view_screen.dart';
 class CategoryFeed extends StatefulWidget {
   final String category;
   final List<NewsArticle> articles;
+  final Future<void> Function() onRefresh;
 
-  const CategoryFeed({super.key, required this.category, required this.articles});
+  const CategoryFeed({
+    super.key,
+    required this.category,
+    required this.articles,
+    required this.onRefresh,
+  });
 
   @override
   State<CategoryFeed> createState() => _CategoryFeedState();
@@ -16,29 +22,18 @@ class CategoryFeed extends StatefulWidget {
 
 class _CategoryFeedState extends State<CategoryFeed>
     with AutomaticKeepAliveClientMixin<CategoryFeed> {
-  // Large enough that a user could not plausibly swipe past either edge in a
-  // session, so the feed loops seamlessly in both directions without true
-  // unbounded paging. Rounded down to a multiple of the article count so the
-  // feed always starts on the first article.
-  static const int _kLargePageBase = 100000;
-
-  PageController? _pageController;
+  // Bounded (not an infinite loop): RefreshIndicator only ever triggers when
+  // the scroll position is at its true minimum extent, which an endlessly
+  // wrapping PageView never reaches. Stopping at the first/last article is
+  // the tradeoff that makes pull-to-refresh able to fire at all.
+  final PageController _pageController = PageController();
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.articles.isNotEmpty) {
-      final n = widget.articles.length;
-      _pageController = PageController(initialPage: (_kLargePageBase ~/ n) * n);
-    }
-  }
-
-  @override
   void dispose() {
-    _pageController?.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -46,24 +41,46 @@ class _CategoryFeedState extends State<CategoryFeed>
   Widget build(BuildContext context) {
     super.build(context);
 
-    if (widget.articles.isEmpty) {
-      return const Center(child: Text('No stories yet'));
-    }
-
-    return PageView.builder(
-      controller: _pageController,
-      scrollDirection: Axis.vertical,
-      itemBuilder: (context, index) {
-        final article = widget.articles[index % widget.articles.length];
-        return GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ArticleWebViewScreen(articleUrl: article.articleUrl),
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: const Color(0xFF1E1E1E),
+      child: widget.articles.isEmpty
+          ? ListView(
+              // A plain Center isn't scrollable, so pull-to-refresh has
+              // nothing to drag against; ListView keeps the gesture working
+              // even when this category currently has no stories.
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(
+                  height: 400,
+                  child: Center(child: Text('No stories yet')),
+                ),
+              ],
+            )
+          : PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              itemCount: widget.articles.length,
+              // Keeps the vertical swipe-between-articles paging behavior
+              // while still letting RefreshIndicator detect a pull past the
+              // very first article.
+              physics: const PageScrollPhysics().applyTo(
+                const AlwaysScrollableScrollPhysics(),
+              ),
+              itemBuilder: (context, index) {
+                final article = widget.articles[index];
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ArticleWebViewScreen(articleUrl: article.articleUrl),
+                    ),
+                  ),
+                  child: NewsCard(article: article),
+                );
+              },
             ),
-          ),
-          child: NewsCard(article: article),
-        );
-      },
     );
   }
 }

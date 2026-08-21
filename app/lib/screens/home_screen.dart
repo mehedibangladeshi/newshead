@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
+import '../data/article_cache.dart';
 import '../data/article_repository.dart';
 import '../models/news_article.dart';
 import 'category_feed.dart';
@@ -14,9 +16,20 @@ const List<({String label, String key})> kCategories = [
 ];
 
 class HomeScreen extends StatefulWidget {
-  final List<NewsArticle> articles;
+  final List<NewsArticle> initialArticles;
+  final String? initialRawBody;
+  final Uri sourceUrl;
+  final http.Client client;
+  final ArticleCache cache;
 
-  const HomeScreen({super.key, required this.articles});
+  const HomeScreen({
+    super.key,
+    required this.initialArticles,
+    required this.initialRawBody,
+    required this.sourceUrl,
+    required this.client,
+    required this.cache,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -33,6 +46,13 @@ class _HomeScreenState extends State<HomeScreen>
   late final TabController _tabController;
   late final PageController _categoryPageController;
   bool _isSyncingFromPage = false;
+
+  late List<NewsArticle> _articles;
+  String? _lastRawBody;
+  // Bumped on every successful refresh so each CategoryFeed remounts fresh
+  // (fresh PageController at the first article) instead of keeping its old
+  // scroll position over reordered/changed content.
+  int _refreshGeneration = 0;
 
   static const List<String> _weekdayNames = [
     'Mon',
@@ -61,6 +81,8 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _articles = widget.initialArticles;
+    _lastRawBody = widget.initialRawBody;
     final n = kCategories.length;
     _tabController = TabController(length: n, vsync: this);
     _categoryPageController = PageController(
@@ -123,6 +145,41 @@ class _HomeScreenState extends State<HomeScreen>
     return '$weekday, $month ${now.day}';
   }
 
+  // Pulled from any category feed. Re-fetches from the shared source; if the
+  // server returned byte-identical content to last time (nothing new to
+  // show), the order is shuffled per category so the pull still visibly
+  // "does something" instead of looking like a no-op.
+  Future<void> _handleRefresh() async {
+    final result = await fetchArticles(
+      sourceUrl: widget.sourceUrl,
+      client: widget.client,
+      cache: widget.cache,
+    );
+
+    if (!result.fromNetwork) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not refresh — check your connection'),
+          ),
+        );
+      }
+      return;
+    }
+
+    var articles = result.articles;
+    if (result.rawBody == _lastRawBody) {
+      articles = articles.toList()..shuffle();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _articles = articles;
+      _lastRawBody = result.rawBody;
+      _refreshGeneration++;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,9 +213,10 @@ class _HomeScreenState extends State<HomeScreen>
               itemBuilder: (context, page) {
                 final category = kCategories[page % kCategories.length];
                 return CategoryFeed(
-                  key: PageStorageKey(category.key),
+                  key: PageStorageKey('${category.key}#$_refreshGeneration'),
                   category: category.key,
-                  articles: articlesForCategory(widget.articles, category.key),
+                  articles: articlesForCategory(_articles, category.key),
+                  onRefresh: _handleRefresh,
                 );
               },
             ),

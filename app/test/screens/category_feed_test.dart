@@ -26,8 +26,12 @@ const articles = [
 
 void main() {
   testWidgets('vertical drag advances to the next article in the category', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: CategoryFeed(category: 'politics', articles: articles),
+    await tester.pumpWidget(MaterialApp(
+      home: CategoryFeed(
+        category: 'politics',
+        articles: articles,
+        onRefresh: () async {},
+      ),
     ));
     await tester.pump();
 
@@ -42,8 +46,12 @@ void main() {
   });
 
   testWidgets('shows a placeholder when the category has no articles', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: CategoryFeed(category: 'finance', articles: []),
+    await tester.pumpWidget(MaterialApp(
+      home: CategoryFeed(
+        category: 'finance',
+        articles: const [],
+        onRefresh: () async {},
+      ),
     ));
     await tester.pump();
 

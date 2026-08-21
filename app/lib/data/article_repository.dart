@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/news_article.dart';
@@ -33,7 +34,23 @@ List<NewsArticle> articlesForCategory(List<NewsArticle> all, String category) {
   return all.where((a) => a.category == category).toList();
 }
 
-Future<List<NewsArticle>> fetchArticles({
+class ArticlesFetchResult {
+  final List<NewsArticle> articles;
+  // The raw response/cache body this came from, so a later fetch can tell
+  // whether the source actually returned new content.
+  final String? rawBody;
+  // True only when this result came from a fresh, successful network
+  // response — false for cache fallback (network error/non-200) or empty.
+  final bool fromNetwork;
+
+  const ArticlesFetchResult({
+    required this.articles,
+    required this.rawBody,
+    required this.fromNetwork,
+  });
+}
+
+Future<ArticlesFetchResult> fetchArticles({
   required Uri sourceUrl,
   required http.Client client,
   required ArticleCache cache,
@@ -48,19 +65,29 @@ Future<List<NewsArticle>> fetchArticles({
         // Best-effort cache write; a failure here shouldn't discard a
         // successful fetch that's already been parsed.
       }
-      return articles;
+      return ArticlesFetchResult(
+        articles: articles,
+        rawBody: response.body,
+        fromNetwork: true,
+      );
     }
-  } catch (_) {
-    // Network error or non-200 handled below via cache fallback.
+    debugPrint('fetchArticles: unexpected status ${response.statusCode} from $sourceUrl');
+  } catch (error) {
+    debugPrint('fetchArticles: network fetch of $sourceUrl failed: $error');
   }
 
   final cached = await cache.read();
   if (cached != null) {
     try {
-      return parseArticles(cached);
-    } catch (_) {
-      return [];
+      return ArticlesFetchResult(
+        articles: parseArticles(cached),
+        rawBody: cached,
+        fromNetwork: false,
+      );
+    } catch (error) {
+      debugPrint('fetchArticles: failed to parse cached articles: $error');
+      return const ArticlesFetchResult(articles: [], rawBody: null, fromNetwork: false);
     }
   }
-  return [];
+  return const ArticlesFetchResult(articles: [], rawBody: null, fromNetwork: false);
 }
