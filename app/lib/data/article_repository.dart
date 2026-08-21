@@ -41,16 +41,26 @@ Future<List<NewsArticle>> fetchArticles({
   try {
     final response = await client.get(sourceUrl);
     if (response.statusCode == 200) {
-      await cache.write(response.body);
-      return parseArticles(response.body);
+      final articles = parseArticles(response.body);
+      try {
+        await cache.write(response.body);
+      } catch (_) {
+        // Best-effort cache write; a failure here shouldn't discard a
+        // successful fetch that's already been parsed.
+      }
+      return articles;
     }
   } catch (_) {
-    // Fall through to the cache below.
+    // Network error or non-200 handled below via cache fallback.
   }
 
   final cached = await cache.read();
   if (cached != null) {
-    return parseArticles(cached);
+    try {
+      return parseArticles(cached);
+    } catch (_) {
+      return [];
+    }
   }
   return [];
 }

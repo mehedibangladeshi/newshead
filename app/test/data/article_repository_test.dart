@@ -15,6 +15,22 @@ class InMemoryArticleCache implements ArticleCache {
   Future<void> write(String contents) async => stored = contents;
 }
 
+/// A fake cache whose [write] always throws, used to verify that a cache
+/// write failure doesn't discard an already-successful, already-parsed
+/// network fetch.
+class ThrowingWriteArticleCache implements ArticleCache {
+  String? stored;
+  ThrowingWriteArticleCache([this.stored]);
+
+  @override
+  Future<String?> read() async => stored;
+
+  @override
+  Future<void> write(String contents) async {
+    throw Exception('disk full');
+  }
+}
+
 const _validJson = '''
 {
   "generated_at": "2026-08-20",
@@ -119,5 +135,34 @@ void main() {
     );
 
     expect(articles, isEmpty);
+  });
+
+  test('fetchArticles returns an empty list instead of throwing when the '
+      'cache is malformed and the network also fails', () async {
+    final client = MockClient((request) async => throw Exception('network down'));
+    final cache = InMemoryArticleCache('this is not valid json {{{');
+
+    final articles = await fetchArticles(
+      sourceUrl: Uri.parse('https://example.com/articles.json'),
+      client: client,
+      cache: cache,
+    );
+
+    expect(articles, isEmpty);
+  });
+
+  test('fetchArticles returns the freshly parsed articles even when caching '
+      'the response fails', () async {
+    final client = MockClient((request) async => http.Response(_validJson, 200));
+    final cache = ThrowingWriteArticleCache();
+
+    final articles = await fetchArticles(
+      sourceUrl: Uri.parse('https://example.com/articles.json'),
+      client: client,
+      cache: cache,
+    );
+
+    expect(articles.length, 2);
+    expect(articles[0].id, 'a1');
   });
 }
