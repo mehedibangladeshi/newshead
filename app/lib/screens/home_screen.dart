@@ -22,7 +22,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   // Large enough that a user could not plausibly swipe past either edge in a
   // session, so category switching loops seamlessly in both directions
   // (Finance -> Main, Main -> Finance) without true unbounded paging.
@@ -34,11 +35,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isSyncingFromPage = false;
 
   static const List<String> _weekdayNames = [
-    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
   ];
   static const List<String> _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -46,7 +63,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     final n = kCategories.length;
     _tabController = TabController(length: n, vsync: this);
-    _categoryPageController = PageController(initialPage: (_kLargePageBase ~/ n) * n);
+    _categoryPageController = PageController(
+      initialPage: (_kLargePageBase ~/ n) * n,
+    );
     _tabController.addListener(_onTabChanged);
   }
 
@@ -65,9 +84,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // _onCategoryPageChanged), to avoid feeding back into a loop.
   void _onTabChanged() {
     if (_isSyncingFromPage || _tabController.indexIsChanging) return;
-    final currentPage = _categoryPageController.page?.round() ??
+    final currentPage =
+        _categoryPageController.page?.round() ??
         _categoryPageController.initialPage;
-    final targetPage = _nearestPageForCategory(currentPage, _tabController.index);
+    final targetPage = _nearestPageForCategory(
+      currentPage,
+      _tabController.index,
+    );
     if (targetPage == currentPage) return;
     _categoryPageController.animateToPage(
       targetPage,
@@ -103,28 +126,111 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.black.withValues(alpha: 0.35),
-        elevation: 0,
-        title: Text(_todayLabel()),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: kCategories.map((c) => Tab(text: c.label)).toList(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // The date sits in its own row, in normal layout flow, so it
+          // never shares space with the status bar / notch / Dynamic
+          // Island, and the image below never starts underneath them.
+          ColoredBox(
+            color: const Color(0xFF121212),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                child: Text(
+                  _todayLabel(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: PageView.builder(
+              controller: _categoryPageController,
+              onPageChanged: _onCategoryPageChanged,
+              itemBuilder: (context, page) {
+                final category = kCategories[page % kCategories.length];
+                return CategoryFeed(
+                  key: PageStorageKey(category.key),
+                  category: category.key,
+                  articles: articlesForCategory(widget.articles, category.key),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: ColoredBox(
+        color: const Color(0xFF121212),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ListenableBuilder(
+                listenable: _tabController,
+                builder: (context, _) {
+                  return Row(
+                    children: [
+                      for (var i = 0; i < kCategories.length; i++)
+                        Padding(
+                          padding: EdgeInsets.only(left: i == 0 ? 0 : 10),
+                          child: _CategoryPill(
+                            label: kCategories[i].label,
+                            selected: _tabController.index == i,
+                            onTap: () => _tabController.animateTo(i),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       ),
-      body: PageView.builder(
-        controller: _categoryPageController,
-        onPageChanged: _onCategoryPageChanged,
-        itemBuilder: (context, page) {
-          final category = kCategories[page % kCategories.length];
-          return CategoryFeed(
-            key: PageStorageKey(category.key),
-            category: category.key,
-            articles: articlesForCategory(widget.articles, category.key),
-          );
-        },
+    );
+  }
+}
+
+class _CategoryPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CategoryPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? accent : Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected
+                ? Theme.of(context).colorScheme.onPrimary
+                : Colors.white70,
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
