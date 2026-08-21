@@ -218,6 +218,10 @@ def main():
 
     capped_articles = cap_per_category(all_articles)
 
+    if not capped_articles:
+        logger.error("No articles were scraped from any source; not writing output.")
+        raise SystemExit(1)
+
     output = {
         "generated_at": edition_date,
         "articles": capped_articles,
