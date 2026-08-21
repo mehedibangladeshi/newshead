@@ -19,12 +19,15 @@ TODAYS_NEWS_URL = f"{BASE_URL}/todays-news"
 # The live masthead is only available as an SVG (logo.svg); the site's own
 # og:image logo asset points at a subdomain that doesn't resolve
 # (images.thedailystar.net), and the favicon is a 16x16 icon - neither
-# usable for the cover. The SVG was rendered to PNG once (see
-# jugantor_epub/assets/dailystar-logo-source.svg for the original) and that
-# PNG is bundled in the repo instead of being fetched over the network like
-# every other source's logo. cover._fetch_logo_image() treats any non-http
-# string as a local file path.
-COVER_LOGO_URL = os.path.join(config.PROJECT_ROOT, "jugantor_epub", "assets", "dailystar-logo.png")
+# usable as a network-fetchable raster logo. The SVG was rendered to PNG
+# once and that PNG is committed to this repo at scraper/assets/ rather
+# than fetched live like every other source's logo. Unlike the origin
+# repo (whose epub pipeline's cover._fetch_logo_image() special-cases
+# non-http strings as local file paths), newshead's imageUrl needs to be
+# a real HTTP URL the Flutter app can fetch over the network, so this
+# points at the file's raw.githubusercontent.com URL on `main` instead of
+# a local filesystem path.
+COVER_LOGO_URL = "https://raw.githubusercontent.com/mehedibangladeshi/newshead/main/scraper/assets/dailystar-logo.png"
 COVER_ACCENT_COLOR = (4, 13, 51)  # the site's recurring UI navy, #040D33 - its wordmark itself is monochrome
 
 SOURCE_NAME = "The Daily Star"
