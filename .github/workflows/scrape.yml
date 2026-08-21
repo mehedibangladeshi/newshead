@@ -1,0 +1,34 @@
+# .github/workflows/scrape.yml
+name: Scrape and publish articles
+
+on:
+  schedule:
+    - cron: '0 1,5,10,14 * * *'   # 07:00 / 11:00 / 16:00 / 20:00 Asia/Dhaka (UTC+6)
+  workflow_dispatch:
+
+concurrency:
+  group: scrape-and-publish
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+      - run: pip install -r scraper/requirements.txt
+      - run: python scripts/generate.py
+      - run: |
+          mkdir -p publish
+          cp articles.json publish/articles.json
+      - uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: publish
+          keep_files: false
+          force_orphan: true
