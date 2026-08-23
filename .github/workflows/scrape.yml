@@ -13,7 +13,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    # The uncapped taxonomy (~130 mapped sections across 5 sources) takes
+    # The uncapped taxonomy (100 mapped sections across 5 sources) takes
     # ~13 minutes for the scrape step alone on a local run; 20 minutes left
     # too little headroom for checkout/publish overhead and CI network
     # variability.
