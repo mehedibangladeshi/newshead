@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'data/article_cache.dart';
 import 'data/article_repository.dart';
+import 'data/category_filter_store.dart';
 import 'models/app_category.dart';
 import 'models/news_article.dart';
 import 'screens/home_screen.dart';
@@ -33,6 +34,7 @@ Future<void> main() async {
   final documentsDir = await getApplicationDocumentsDirectory();
   final cache = FileArticleCache('${documentsDir.path}/articles_cache.json');
   final client = http.Client();
+  final filterStore = SharedPreferencesCategoryFilterStore();
 
   final result = await fetchArticles(
     sourceUrl: kArticlesUrl,
@@ -47,6 +49,7 @@ Future<void> main() async {
     sourceUrl: kArticlesUrl,
     client: client,
     cache: cache,
+    filterStore: filterStore,
   ));
 }
 
@@ -57,6 +60,7 @@ class NewsHeadApp extends StatelessWidget {
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
+  final CategoryFilterStore filterStore;
 
   const NewsHeadApp({
     super.key,
@@ -66,6 +70,7 @@ class NewsHeadApp extends StatelessWidget {
     required this.sourceUrl,
     required this.client,
     required this.cache,
+    required this.filterStore,
   });
 
   @override
@@ -80,6 +85,7 @@ class NewsHeadApp extends StatelessWidget {
         sourceUrl: sourceUrl,
         client: client,
         cache: cache,
+        filterStore: filterStore,
       ),
     );
   }
