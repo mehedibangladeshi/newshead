@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -10,8 +12,23 @@ import 'screens/home_screen.dart';
 
 final Uri kArticlesUrl = Uri.parse('https://mehedibangladeshi.github.io/newshead/articles.json');
 
+// NetworkImage has no connect timeout by default, so a black-holed
+// connection (packets dropped, no response, no RST) hangs indefinitely —
+// the article's image never loads and never surfaces the widget's own
+// broken-image fallback for the rest of the app session. Bounding the
+// connect phase lets a stuck request fail and free its ImageCache slot for
+// a retry on the next rebuild.
+class _TimeoutHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..connectionTimeout = const Duration(seconds: 15);
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = _TimeoutHttpOverrides();
 
   final documentsDir = await getApplicationDocumentsDirectory();
   final cache = FileArticleCache('${documentsDir.path}/articles_cache.json');
