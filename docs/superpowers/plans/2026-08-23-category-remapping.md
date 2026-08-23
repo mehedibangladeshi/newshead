@@ -59,7 +59,7 @@ def test_parse_sections_default_matches_include_all():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_jugantor_sections.py -v`
+Run: `python -m pytest tests/test_jugantor_sections.py -v`
 Expected: FAIL with `TypeError: parse_sections() got an unexpected keyword argument 'include_all'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -113,7 +113,7 @@ def discover_sections(include_all=False):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_jugantor_sections.py -v`
+Run: `python -m pytest tests/test_jugantor_sections.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -161,7 +161,7 @@ def test_parse_sections_include_all_bypasses_allowlist():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_dhakatribune_sections.py -v`
+Run: `python -m pytest tests/test_dhakatribune_sections.py -v`
 Expected: FAIL with `TypeError: parse_sections() got an unexpected keyword argument 'include_all'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -216,7 +216,7 @@ def discover_sections(include_all=False):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_dhakatribune_sections.py -v`
+Run: `python -m pytest tests/test_dhakatribune_sections.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -262,7 +262,7 @@ def test_parse_sections_include_all_bypasses_allowlist():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_ittefaq_sections.py -v`
+Run: `python -m pytest tests/test_ittefaq_sections.py -v`
 Expected: FAIL with `TypeError: parse_sections() got an unexpected keyword argument 'include_all'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -315,7 +315,7 @@ def discover_sections(include_all=False):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_ittefaq_sections.py -v`
+Run: `python -m pytest tests/test_ittefaq_sections.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -363,7 +363,7 @@ def test_parse_sections_include_all_bypasses_denylist():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_prothomalo_sections.py -v`
+Run: `python -m pytest tests/test_prothomalo_sections.py -v`
 Expected: FAIL with `TypeError: parse_sections() got an unexpected keyword argument 'include_all'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -420,7 +420,7 @@ def discover_sections(include_all=False):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_prothomalo_sections.py -v`
+Run: `python -m pytest tests/test_prothomalo_sections.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -474,7 +474,7 @@ def test_parse_todays_news_include_all_keeps_video_hub():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_dailystar_sections.py -v`
+Run: `python -m pytest tests/test_dailystar_sections.py -v`
 Expected: FAIL with `TypeError: parse_todays_news() got an unexpected keyword argument 'include_all'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -551,7 +551,7 @@ def list_articles(slug, edition_date=None):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_dailystar_sections.py -v`
+Run: `python -m pytest tests/test_dailystar_sections.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -600,7 +600,7 @@ def test_render_report_handles_a_source_with_no_sections():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_discover_sections_report.py -v`
+Run: `python -m pytest tests/test_discover_sections_report.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'scripts.discover_sections'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -684,7 +684,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_discover_sections_report.py -v`
+Run: `python -m pytest tests/test_discover_sections_report.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -765,7 +765,7 @@ def test_classify_article_category_returns_none_when_neither_matches():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_generate_data.py -v -k classify_article_category`
+Run: `python -m pytest tests/test_generate_data.py -v -k classify_article_category`
 Expected: FAIL with `ImportError: cannot import name 'classify_article_category'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -825,7 +825,7 @@ Then update the per-section classification call in `collect_source_articles` (`s
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_generate_data.py -v`
+Run: `python -m pytest tests/test_generate_data.py -v`
 Expected: PASS (all tests, including the pre-existing `classify_category` ones, since that function's signature is untouched)
 
 - [ ] **Step 5: Commit**
@@ -874,7 +874,7 @@ def test_interleave_by_source_keeps_every_article_for_a_single_source():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_generate_data.py -v -k interleave_by_source`
+Run: `python -m pytest tests/test_generate_data.py -v -k interleave_by_source`
 Expected: FAIL with `ImportError: cannot import name 'interleave_by_source'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -944,7 +944,7 @@ Update `main()`'s call site (was `capped_articles = cap_per_category(all_article
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_generate_data.py -v`
+Run: `python -m pytest tests/test_generate_data.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -990,7 +990,7 @@ def test_build_output_includes_the_given_articles():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/test_generate_data.py -v -k build_output`
+Run: `python -m pytest tests/test_generate_data.py -v -k build_output`
 Expected: FAIL with `ImportError: cannot import name 'build_output'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1038,7 +1038,7 @@ Update `main()` to use it (was building the `output` dict inline):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/test_generate_data.py -v`
+Run: `python -m pytest tests/test_generate_data.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1748,7 +1748,7 @@ def test_classify_category_matches_new_category_keywords():
 
 - [ ] **Step 5: Run the full Python test suite**
 
-Run: `pytest -v`
+Run: `python -m pytest -v`
 Expected: PASS
 
 - [ ] **Step 6: Runtime sanity check — time a real generation run**
