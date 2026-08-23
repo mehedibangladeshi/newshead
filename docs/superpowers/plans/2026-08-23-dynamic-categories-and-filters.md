@@ -1098,7 +1098,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('readExcludedKeys returns an empty set when nothing is stored', async () async {
+  test('readExcludedKeys returns an empty set when nothing is stored', () async {
     final store = SharedPreferencesCategoryFilterStore();
     expect(await store.readExcludedKeys(), isEmpty);
   });
@@ -1118,7 +1118,6 @@ void main() {
 }
 ```
 
-(Note the first test's signature has a typo-looking `async ()` in this draft — write it as a normal `() async` like the other two; it's called out here only so you type it correctly, not copy a mistake.)
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
