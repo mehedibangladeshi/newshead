@@ -105,7 +105,7 @@ void main() {
     expect(find.text('Politics'), findsNothing);
   });
 
-  testWidgets('pull-to-refresh with a different category list re-renders the pill bar', (tester) async {
+  testWidgets('tapping the refresh button with a different category list re-renders the pill bar', (tester) async {
     final client = MockClient((request) async => http.Response(_threeCategoriesJson, 200));
 
     await tester.pumpWidget(
@@ -126,7 +126,7 @@ void main() {
     expect(find.text('Main'), findsOneWidget);
     expect(find.text('Sports'), findsNothing);
 
-    await tester.fling(find.byType(RefreshIndicator), const Offset(0, 300), 1000);
+    await tester.tap(find.byIcon(Icons.refresh));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();

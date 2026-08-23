@@ -7,6 +7,7 @@ import '../data/category_filter_store.dart';
 import '../data/category_visibility.dart';
 import '../models/app_category.dart';
 import '../models/news_article.dart';
+import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import 'category_feed.dart';
 import 'category_filter_sheet.dart';
@@ -49,6 +50,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   late PageController _categoryPageController;
   bool _isSyncingFromPage = false;
+  // One key per visible pill, used to scroll the newly-selected pill into
+  // view (see _onTabIndexChangedForPillBar). Rebuilt alongside the
+  // TabController/PageController whenever the visible-category count
+  // changes.
+  late List<GlobalKey> _pillKeys;
+  // Tracks the last tab index we already reacted to, so the pill-scroll
+  // listener (which fires on every TabController notification, including
+  // the extra one when an animateTo settles) only acts once per genuine
+  // index change.
+  int? _lastPillScrollIndex;
+  bool _isRefreshing = false;
 
   late List<NewsArticle> _articles;
   late List<AppCategory> _categories;
@@ -122,13 +134,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _categoryPageController = PageController(
       initialPage: n == 0 ? 0 : (_kLargePageBase ~/ n) * n,
     );
+    _pillKeys = List.generate(n, (_) => GlobalKey());
+    _lastPillScrollIndex = null;
     _tabController.addListener(_onTabChanged);
+    _tabController.addListener(_onTabIndexChangedForPillBar);
   }
 
   void _disposeControllers() {
     _tabController.removeListener(_onTabChanged);
+    _tabController.removeListener(_onTabIndexChangedForPillBar);
     _tabController.dispose();
     _categoryPageController.dispose();
+  }
+
+  // Fires on every TabController notification (both a pill tap's animateTo
+  // and a swipe's direct `_tabController.index = ...` assignment in
+  // _onCategoryPageChanged) and, on a genuine index change, scrolls the
+  // newly-selected pill into view within the horizontal pill bar.
+  void _onTabIndexChangedForPillBar() {
+    final index = _tabController.index;
+    if (_lastPillScrollIndex == index) return;
+    _lastPillScrollIndex = index;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (index < 0 || index >= _pillKeys.length) return;
+      final pillContext = _pillKeys[index].currentContext;
+      if (pillContext == null) return;
+      Scrollable.ensureVisible(
+        pillContext,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   @override
@@ -181,45 +219,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // show), the order is shuffled per category so the pull still visibly
   // "does something" instead of looking like a no-op.
   Future<void> _handleRefresh() async {
-    final result = await fetchArticles(
-      sourceUrl: widget.sourceUrl,
-      client: widget.client,
-      cache: widget.cache,
-    );
-
-    if (!result.fromNetwork) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not refresh — check your connection'),
-          ),
-        );
-      }
-      return;
-    }
-
-    var articles = result.articles;
-    if (result.rawBody == _lastRawBody) {
-      articles = articles.toList()..shuffle();
-    }
-
-    if (!mounted) return;
-    final nextVisible = visibleCategories(
-      fetchedCategories: result.categories,
-      articles: articles,
-      excludedKeys: _excludedCategoryKeys,
-    );
     setState(() {
-      _articles = articles;
-      _lastRawBody = result.rawBody;
-      _refreshGeneration++;
-      _categories = result.categories;
-      if (nextVisible.length != _visibleCategories.length) {
-        _disposeControllers();
-        _initControllers(nextVisible.length);
-      }
-      _visibleCategories = nextVisible;
+      _isRefreshing = true;
     });
+    try {
+      final result = await fetchArticles(
+        sourceUrl: widget.sourceUrl,
+        client: widget.client,
+        cache: widget.cache,
+      );
+
+      if (!result.fromNetwork) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not refresh — check your connection'),
+            ),
+          );
+        }
+        return;
+      }
+
+      var articles = result.articles;
+      if (result.rawBody == _lastRawBody) {
+        articles = articles.toList()..shuffle();
+      }
+
+      if (!mounted) return;
+      final nextVisible = visibleCategories(
+        fetchedCategories: result.categories,
+        articles: articles,
+        excludedKeys: _excludedCategoryKeys,
+      );
+      setState(() {
+        _articles = articles;
+        _lastRawBody = result.rawBody;
+        _refreshGeneration++;
+        _categories = result.categories;
+        if (nextVisible.length != _visibleCategories.length) {
+          _disposeControllers();
+          _initControllers(nextVisible.length);
+        }
+        _visibleCategories = nextVisible;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -229,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ColoredBox(
-            color: const Color(0xFF121212),
+            color: AppColors.background,
             child: SafeArea(
               bottom: false,
               child: Padding(
@@ -238,28 +287,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const BrandMark(),
-                    IconButton(
-                      onPressed: _openFilterSheet,
-                      icon: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          const Icon(Icons.tune, color: Colors.white70),
-                          if (_excludedCategoryKeys.isNotEmpty)
-                            Positioned(
-                              top: -2,
-                              right: -2,
-                              child: Container(
-                                key: const Key('filterActiveBadge'),
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE1483A),
-                                  shape: BoxShape.circle,
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _openFilterSheet,
+                          icon: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Icon(Icons.tune, color: AppColors.textSecondary),
+                              if (_excludedCategoryKeys.isNotEmpty)
+                                Positioned(
+                                  top: -2,
+                                  right: -2,
+                                  child: Container(
+                                    key: const Key('filterActiveBadge'),
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.accent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                        ],
-                      ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _isRefreshing ? null : _handleRefresh,
+                          icon: _isRefreshing
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                )
+                              : const Icon(Icons.refresh, color: AppColors.textSecondary),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -271,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ? const Center(
                     child: Text(
                       'No stories yet',
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                   )
                 : PageView.builder(
@@ -288,7 +354,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         key: PageStorageKey('${category.key}#$_refreshGeneration'),
                         category: category.key,
                         articles: articlesForCategory(_articles, category.key),
-                        onRefresh: _handleRefresh,
                       );
                     },
                   ),
@@ -298,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       bottomNavigationBar: _visibleCategories.isEmpty
           ? null
           : ColoredBox(
-              color: const Color(0xFF121212),
+              color: AppColors.background,
               child: SafeArea(
                 top: false,
                 child: Padding(
@@ -312,6 +377,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           children: [
                             for (var i = 0; i < _visibleCategories.length; i++)
                               Padding(
+                                key: _pillKeys[i],
                                 padding: EdgeInsets.only(left: i == 0 ? 0 : 10),
                                 child: _CategoryPill(
                                   label: _visibleCategories[i].label,
@@ -355,13 +421,15 @@ class _CategoryPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: selected
-                ? Theme.of(context).colorScheme.onPrimary
-                : Colors.white70,
-            fontSize: 14,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-          ),
+          style:
+              (Theme.of(context).extension<AppTypography>()?.pillLabel ??
+                      const TextStyle(fontSize: 13))
+                  .copyWith(
+                color: selected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : AppColors.textSecondary,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../theme/app_theme.dart';
 
 /// The app bar's brand mark: the same red badge + black chevron as the
 /// OS app icon (app/assets/icon/icon.png), reproduced as native widgets
@@ -10,11 +11,11 @@ import 'package:google_fonts/google_fonts.dart';
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key});
 
-  static const _accent = Color(0xFFE1483A);
-  static const _chevronColor = Color(0xFF121212);
-
   @override
   Widget build(BuildContext context) {
+    final typography =
+        Theme.of(context).extension<AppTypography>() ?? AppTypography.standard();
+    final wordmark = typography.wordmark;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -22,11 +23,15 @@ class BrandMark extends StatelessWidget {
           width: 24,
           height: 24,
           decoration: BoxDecoration(
-            color: _accent,
+            color: AppColors.accent,
             borderRadius: BorderRadius.circular(7),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.chevron_right, color: _chevronColor, size: 18),
+          child: const Icon(
+            Icons.chevron_right,
+            color: AppColors.background,
+            size: 18,
+          ),
         ),
         const SizedBox(width: 8),
         Text.rich(
@@ -34,11 +39,11 @@ class BrandMark extends StatelessWidget {
             children: [
               TextSpan(
                 text: 'NEWS',
-                style: GoogleFonts.anton(color: Colors.white, fontSize: 18),
+                style: wordmark.copyWith(color: Colors.white),
               ),
               TextSpan(
                 text: 'HEAD',
-                style: GoogleFonts.anton(color: _accent, fontSize: 18),
+                style: wordmark.copyWith(color: AppColors.accent),
               ),
             ],
           ),

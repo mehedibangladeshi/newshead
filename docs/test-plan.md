@@ -93,27 +93,40 @@ for source, (has, total) in by_source.items():
       as a pill even though it's still in the fetched `categories` array.
 - [ ] Tapping a pill animates the tab and switches the feed to that category.
 - [ ] Horizontally swiping the main feed also updates the selected pill (the
-      `TabController` ↔ `PageView` sync holds both directions).
+      `TabController` ↔ `PageView` sync holds both directions), and the pill
+      bar auto-scrolls (centered) to keep the newly-selected pill visible
+      even when it's off-screen.
 - [ ] A category with articles shows: source pill, headline (however long —
-      never cut off with "…"; only the text block below the photo scrolls
-      if it doesn't fit), a publish-timestamp row under the headline in the
-      source's own language when `publishedAt` is present (absent entirely
-      when it's null), snippet, "Read more", a correctly-aspect-ratioed
-      sharp image, and a blurred backdrop filling the leftover space.
+      never cut off, never scrollable), a publish-timestamp row under the
+      headline in the source's own language when `publishedAt` is present
+      (absent entirely when it's null), a correctly-aspect-ratioed sharp
+      image, and a blurred backdrop filling the leftover space. The snippet
+      shows in full with "Read more" right below when it fits the
+      remaining space; only when it doesn't does that snippet+"Read more"
+      pair become a small, tightly-bounded scrollable region — swiping
+      anywhere else on the card must always page to the next article, never
+      get captured by an inner scroll.
 - [ ] A category with zero articles shows "No stories yet" instead of
       crashing or looping — exercise this by picking a category only ever
       populated by a currently-blocked source.
 - [ ] Vertically swiping within a category advances to the next article;
-      swiping past the last article doesn't crash (bounded, not infinite).
+      swiping past the last article loops back to the first (infinite in
+      both directions), never a dead end.
 - [ ] Tapping a card opens `ArticleWebViewScreen`, loads the real
-      `articleUrl`, and the back arrow returns to the feed.
-- [ ] Pull-to-refresh shows a spinner and re-fetches; if the response is
+      `articleUrl` in a dark reading mode (inverted-CSS-filtered page, site
+      logo still legible, photos in natural color), and the back arrow
+      returns to the feed.
+- [ ] Tapping the refresh button (top bar, right of the filter icon) shows a
+      spinner in place of its icon and re-fetches; if the response is
       byte-identical to last time, order visibly reshuffles instead of
-      looking like a no-op.
+      looking like a no-op. There is no pull-to-refresh gesture.
 - [ ] Airplane mode / no network: app falls back to the last cached
-      `articles.json` rather than showing nothing; pulling to refresh shows
+      `articles.json` rather than showing nothing; tapping refresh shows
       the "Could not refresh — check your connection" snackbar instead of
       crashing.
+- [ ] Status bar icons (time/battery/signal) are visible (light icons) on
+      every screen, including the home screen's custom top bar, which has
+      no `AppBar` for Flutter to auto-derive icon brightness from.
 - [ ] Tapping the filter icon opens a bottom sheet listing the **full**
       17-category taxonomy (not just today's visible ones), everything
       checked by default, no visible render-overflow error even scrolled to
@@ -189,3 +202,56 @@ category later leaves the taxonomy, a brief cold-start pill-bar flicker
 before the persisted filter loads, a fire-and-forget preference write,
 and the brand wordmark's font being fetched over the network on first use
 rather than bundled.
+
+## 8. Dark theme, WebView dark mode, and feed interaction overhaul (2026-08-23)
+
+Two pieces of work, both verified live on a Pixel 9 (API 35) emulator.
+
+**WebView dark mode.** `ArticleWebViewScreen` injects a CSS invert filter
+(`invert(1) hue-rotate(180deg)` on `html`, re-inverted on photo/video/embed
+elements) into the external article page on `onPageFinished`, so it roughly
+matches the app's dark theme instead of opening a jarring light page.
+Two real bugs were found only by inspecting a live article's DOM (via
+`setOnConsoleMessage` + an injected survey script), not by guessing:
+
+- **Site logo unreadable.** The logo `<img>` was correctly re-inverted back
+  to its true (dark-on-light-designed) colors, but its `<header>` container
+  only got the page-wide invert once — a correctly-restored dark logo on a
+  correctly-inverted dark header is unreadable. Fixed by excluding
+  `header img`/`nav img` from the re-invert rule, so logos behave like the
+  rest of the page's text (single-inverted, dark→light) instead of being
+  restored to their original colors.
+- **Main image looked inverted.** The site wraps its real (correctly
+  re-inverted) `<img>` in a `<div style="background-image:url(...)">`
+  lazy-load placeholder, set via inline `style` — invisible to a plain
+  `img`/`video`/... selector, so it showed through in the wrong colors at
+  the image's edges/loading window. Fixed by adding
+  `[style*="background-image"]` to the re-invert selector.
+
+Both fixes are generic (`<header>`/`<nav>` and inline-style background
+placeholders are common patterns, not Prothom Alo-specific), not point
+patches for one source.
+
+**Dark theme + feed interactions.** Consolidated every screen's hand-rolled
+color/font literals into `lib/theme/app_theme.dart` (`AppColors`, an
+`AppTypography` `ThemeExtension` for Anton), fixed the status bar/Android
+nav-bar icon brightness (previously invisible against the dark background,
+since most screens have no `AppBar` for Flutter to auto-derive it from),
+and shipped four feed changes: the category pill bar auto-scrolls the
+selected pill into view via `Scrollable.ensureVisible`; pull-to-refresh was
+replaced with a refresh button + spinner; the vertical article feed now
+loops infinitely (same large-base/modulo `PageView` technique already used
+for the horizontal category loop); and the news card's snippet area no
+longer wraps the whole text block in one big scrollable — headline/meta
+are always static, and only the snippet+"Read more" pair becomes a small
+bounded scrollable when it doesn't fit, so a swipe anywhere else on the
+card reliably pages to the next article.
+
+**Lesson for future multi-agent dispatch on this repo:** three of five
+subagents run in parallel for this work independently invoked
+`git stash`/`git stash pop` mid-task (to "diff against a clean baseline"),
+which collided across the shared working tree and briefly reverted two
+files to their pre-session state. Recovered via the stray stash entry each
+collision left behind; no work was ultimately lost, but future prompts to
+parallel agents editing the same working tree should explicitly forbid git
+operations beyond read-only status checks.

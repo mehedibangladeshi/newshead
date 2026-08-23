@@ -30,7 +30,6 @@ void main() {
       home: CategoryFeed(
         category: 'politics',
         articles: articles,
-        onRefresh: () async {},
       ),
     ));
     await tester.pump();
@@ -50,7 +49,6 @@ void main() {
       home: CategoryFeed(
         category: 'finance',
         articles: const [],
-        onRefresh: () async {},
       ),
     ));
     await tester.pump();

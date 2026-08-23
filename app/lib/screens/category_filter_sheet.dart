@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_category.dart';
+import '../theme/app_theme.dart';
 
 /// Opens the category filter as a modal bottom sheet. Always lists every
 /// fetched category (not just the currently-visible ones) — see this
@@ -16,7 +17,6 @@ Future<void> showCategoryFilterSheet({
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF171310),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -69,19 +69,19 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
+                  color: AppColors.textPrimary.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
             const Text(
               'Filter your feed',
-              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             const Text(
               "Unchecked categories are hidden right away. Your picks stay put next time you open the app.",
-              style: TextStyle(color: Colors.white54, fontSize: 11.5),
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 11.5),
             ),
             const SizedBox(height: 10),
             ConstrainedBox(
@@ -92,8 +92,8 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                   for (final category in widget.allCategories)
                     CheckboxListTile(
                       value: !_excludedKeys.contains(category.key),
-                      title: Text(category.label, style: const TextStyle(color: Colors.white)),
-                      activeColor: const Color(0xFFE1483A),
+                      title: Text(category.label, style: const TextStyle(color: AppColors.textPrimary)),
+                      activeColor: AppColors.accent,
                       controlAffinity: ListTileControlAffinity.trailing,
                       onChanged: (checked) {
                         final isChecked = checked ?? true;

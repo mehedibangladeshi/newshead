@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -10,6 +11,7 @@ import 'data/category_filter_store.dart';
 import 'models/app_category.dart';
 import 'models/news_article.dart';
 import 'screens/home_screen.dart';
+import 'theme/app_theme.dart';
 
 final Uri kArticlesUrl = Uri.parse('https://mehedibangladeshi.github.io/newshead/articles.json');
 
@@ -30,6 +32,7 @@ class _TimeoutHttpOverrides extends HttpOverrides {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = _TimeoutHttpOverrides();
+  SystemChrome.setSystemUIOverlayStyle(kSystemOverlayStyle);
 
   final documentsDir = await getApplicationDocumentsDirectory();
   final cache = FileArticleCache('${documentsDir.path}/articles_cache.json');
@@ -77,7 +80,7 @@ class NewsHeadApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NewsHead',
-      theme: ThemeData(colorSchemeSeed: Colors.red, useMaterial3: true),
+      theme: buildAppTheme(),
       home: HomeScreen(
         initialArticles: initialArticles,
         initialCategories: initialCategories,

@@ -59,7 +59,20 @@ The app fetches the published JSON at launch and caches it locally, falling back
 to that cache if the fetch fails (no network, GitHub Pages unreachable). The
 app bar's filter icon opens a bottom sheet listing the full taxonomy; unchecking
 a category hides it immediately and the choice persists locally
-(`shared_preferences`) across launches.
+(`shared_preferences`) across launches. A refresh button next to it re-fetches
+on demand (there's no pull-to-refresh — it was replaced so the vertical feed
+could loop infinitely instead of stopping dead at the last article).
+
+The app has a single dark theme (`lib/theme/app_theme.dart`'s `AppColors`/
+`AppTypography`, no light mode) built around the brand red from the app icon;
+the wordmark and category pills use the Anton display font, but fetched
+article headlines/snippets never do, since Anton has no Bengali glyphs and
+half the sources publish in Bengali. Tapping a card opens the article in an
+in-app WebView that's pushed into a dark reading mode via an injected CSS
+invert filter — `<header>`/`<nav>` images (site logos) are excluded from the
+re-invert so they stay legible against the now-dark header, and elements
+with an inline `background-image` style (lazy-load placeholders) are
+included so they don't flash the wrong colors while loading.
 
 See `docs/superpowers/specs/2026-08-20-newshead-v1-design.md` for the full design,
 and `docs/superpowers/plans/2026-08-23-dynamic-categories-and-filters.md` for the
