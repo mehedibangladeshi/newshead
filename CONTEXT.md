@@ -20,3 +20,7 @@ The explicit, per-source lookup table (`{source_slug: {section_slug: canonical_c
 
 **Discovery Report**:
 The output of the reusable `scripts/discover_sections.py` tool: every raw Source Section per source, including ones a source's own `discover_sections()` normally filters out via a curated allowlist (Dhaka Tribune's and Ittefaq's `CORE_SECTION_SLUGS`). Used to design the Canonical Category list and the Section→Category Mapping by hand — bypasses those allowlists rather than trusting them as "complete."
+
+**Visible Category**:
+A Canonical Category currently shown as a pill/tab in the app: it exists in the fetched `categories` list, has at least one fetched article, and the user hasn't unchecked it in the category filter. One derived list drives both the pill bar and the swipeable feed — there's no separate concept of a "tab list" versus a "filter list." Always ordered by the fetched `categories` list's own order (`main` first), never re-sorted by the app.
+_Avoid_: Tab, active category (both mean this only in passing — use Visible Category for the app-wide derived list itself)
