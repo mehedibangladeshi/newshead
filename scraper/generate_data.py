@@ -17,7 +17,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from . import config
+from . import config, timestamps
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -59,6 +59,17 @@ SOURCE_DISPLAY_NAMES = {
     "dhakatribune": "Dhaka Tribune",
     "dailystar": "The Daily Star",
     "ittefaq": "Ittefaq",
+}
+
+# Per-source display language for formatting an article's publishedAt on
+# the client — mirrors the bengali_date/english_date split each source
+# module already uses for its own format_date().
+SOURCE_LANGUAGE = {
+    "jugantor": "bn",
+    "prothomalo": "bn",
+    "dhakatribune": "en",
+    "dailystar": "en",
+    "ittefaq": "bn",
 }
 
 # Bilingual (English + Bengali) keyword lists used to classify an article's
@@ -307,7 +318,7 @@ def truncate_snippet(text, max_length=160):
     return text[:max_length].rsplit(" ", 1)[0] + "…"
 
 
-def build_article(source_slug, source_name, category, item, fallback_image_url):
+def build_article(source_slug, source_name, category, item, fallback_image_url, run_started_at):
     return {
         "id": make_article_id(source_slug, item["url"]),
         "category": category,
@@ -316,6 +327,10 @@ def build_article(source_slug, source_name, category, item, fallback_image_url):
         "snippet": truncate_snippet(item.get("summary", "")),
         "imageUrl": item.get("thumbnail") or fallback_image_url,
         "articleUrl": item["url"],
+        "language": SOURCE_LANGUAGE.get(source_slug, "en"),
+        "publishedAt": timestamps.parse_published_at(
+            source_slug, item.get("listing_time"), run_started_at
+        ),
     }
 
 
@@ -337,7 +352,7 @@ def enrich_item(source_module, item):
     return enriched
 
 
-def collect_source_articles(source_slug, edition_date):
+def collect_source_articles(source_slug, edition_date, run_started_at):
     source_module = importlib.import_module(f"scraper.sources.{source_slug}")
     source_name = SOURCE_DISPLAY_NAMES.get(source_slug, source_slug)
 
@@ -372,7 +387,9 @@ def collect_source_articles(source_slug, edition_date):
             continue
         item = enrich_item(source_module, item)
         seen_urls.add(item["url"])
-        articles.append(build_article(source_slug, source_name, "main", item, fallback_image_url))
+        articles.append(
+            build_article(source_slug, source_name, "main", item, fallback_image_url, run_started_at)
+        )
 
     # Remaining sections are classified into canonical categories via
     # SECTION_CATEGORY_MAP (explicit, wins outright) or, failing that,
@@ -392,7 +409,9 @@ def collect_source_articles(source_slug, edition_date):
                 continue
             item = enrich_item(source_module, item)
             seen_urls.add(item["url"])
-            articles.append(build_article(source_slug, source_name, category, item, fallback_image_url))
+            articles.append(
+                build_article(source_slug, source_name, category, item, fallback_image_url, run_started_at)
+            )
 
     return articles
 
@@ -431,12 +450,13 @@ def build_output(edition_date, articles):
 
 
 def main():
-    edition_date = datetime.now(DHAKA_TZ).date().isoformat()
+    run_started_at = datetime.now(DHAKA_TZ)
+    edition_date = run_started_at.date().isoformat()
 
     all_articles = []
     for source_slug in config.SOURCES:
         try:
-            source_articles = collect_source_articles(source_slug, edition_date)
+            source_articles = collect_source_articles(source_slug, edition_date, run_started_at)
         except Exception as exc:
             logger.warning("Skipping source %s: %s", source_slug, exc)
             continue

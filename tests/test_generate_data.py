@@ -173,3 +173,54 @@ def test_section_category_map_values_are_all_valid_category_keys():
             assert category in valid_keys, (
                 f"{source_slug!r}[{section_slug!r}] maps to unknown category {category!r}"
             )
+
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from scraper.generate_data import build_article, SOURCE_LANGUAGE
+
+DHAKA_TZ = ZoneInfo("Asia/Dhaka")
+
+
+def test_build_article_includes_language_for_a_bengali_source():
+    item = {"url": "https://example.com/a", "headline": "H", "summary": "S", "listing_time": ""}
+    article = build_article("jugantor", "Jugantor", "main", item, "", None)
+    assert article["language"] == "bn"
+
+
+def test_build_article_includes_language_for_an_english_source():
+    item = {"url": "https://example.com/a", "headline": "H", "summary": "S", "listing_time": ""}
+    article = build_article("dailystar", "The Daily Star", "main", item, "", None)
+    assert article["language"] == "en"
+
+
+def test_source_language_covers_every_configured_source():
+    from scraper import config
+
+    for source_slug in config.SOURCES:
+        assert source_slug in SOURCE_LANGUAGE
+
+
+def test_build_article_includes_a_parsed_published_at():
+    item = {
+        "url": "https://example.com/a",
+        "headline": "H",
+        "summary": "S",
+        "listing_time": "2026-08-23T12:58:59+06:00",
+    }
+    article = build_article("dhakatribune", "Dhaka Tribune", "main", item, "", None)
+    assert article["publishedAt"] == "2026-08-23T12:58:59+06:00"
+
+
+def test_build_article_leaves_published_at_none_when_unparseable():
+    item = {"url": "https://example.com/a", "headline": "H", "summary": "S", "listing_time": ""}
+    article = build_article("dhakatribune", "Dhaka Tribune", "main", item, "", None)
+    assert article["publishedAt"] is None
+
+
+def test_build_article_uses_run_started_at_to_anchor_dailystar_relative_time():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    item = {"url": "https://example.com/a", "headline": "H", "summary": "S", "listing_time": "2 hours ago"}
+    article = build_article("dailystar", "The Daily Star", "main", item, "", anchor)
+    assert article["publishedAt"] == "2026-08-23T12:00:00+06:00"
