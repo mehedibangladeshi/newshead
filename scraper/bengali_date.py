@@ -2,7 +2,7 @@ from datetime import date
 
 _DIGIT_MAP = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
-_MONTH_NAMES = {
+MONTH_NAMES = {
     1: "জানুয়ারি",
     2: "ফেব্রুয়ারি",
     3: "মার্চ",
@@ -24,4 +24,4 @@ def format_bengali_date(iso_date):
     parsed = date.fromisoformat(iso_date)
     day_bn = f"{parsed.day:02d}".translate(_DIGIT_MAP)
     year_bn = str(parsed.year).translate(_DIGIT_MAP)
-    return f"{day_bn} {_MONTH_NAMES[parsed.month]}, {year_bn}"
+    return f"{day_bn} {MONTH_NAMES[parsed.month]}, {year_bn}"
