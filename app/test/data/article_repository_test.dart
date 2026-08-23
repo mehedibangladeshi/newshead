@@ -78,6 +78,16 @@ const _jsonWithTimestamps = '''
 }
 ''';
 
+const _jsonWithNonStringLanguage = '''
+{
+  "generated_at": "2026-08-20",
+  "categories": [{"key": "main", "label": "Main"}],
+  "articles": [
+    {"id": "a1", "category": "main", "source": "Test Source", "headline": "H1", "snippet": "S1", "imageUrl": "https://example.com/1.jpg", "articleUrl": "https://example.com/a1", "language": 123}
+  ]
+}
+''';
+
 void main() {
   test('parseArticles parses all fields correctly', () {
     final articles = parseArticles(_validJson);
@@ -258,5 +268,12 @@ void main() {
     final articles = parseArticles(_jsonWithTimestamps);
     expect(articles[2].language, 'en');
     expect(articles[2].publishedAt, isNull);
+  });
+
+  test('parseArticles includes an article even when language is a non-string value', () {
+    final articles = parseArticles(_jsonWithNonStringLanguage);
+    expect(articles.length, 1);
+    expect(articles[0].id, 'a1');
+    expect(articles[0].language, 'en');
   });
 }

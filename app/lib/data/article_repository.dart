@@ -50,7 +50,7 @@ List<NewsArticle> parseArticles(String jsonString) {
         snippet: (map['snippet'] as String?) ?? '',
         imageUrl: map['imageUrl'] as String,
         articleUrl: map['articleUrl'] as String,
-        language: (map['language'] as String?) ?? 'en',
+        language: map['language'] is String ? map['language'] as String : 'en',
         publishedAt: _tryParsePublishedAt(map['publishedAt']),
       ));
     } catch (_) {

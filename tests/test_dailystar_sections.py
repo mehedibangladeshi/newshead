@@ -4,12 +4,12 @@ _HTML = """
 <div class="views-row">
   <div class="card-title"><a href="https://www.thedailystar.net/news/one">Headline One</a></div>
   <div class="card-intro">Summary one</div>
-  <div class="card-info">2 hours ago</div>
+  <div class="card-info">1 MIN(s)</div>
 </div>
 <div class="views-row">
   <div class="card-title"><a href="https://www.thedailystar.net/star-multimedia/two">Video headline</a></div>
   <div class="card-intro">Summary two</div>
-  <div class="card-info">3 hours ago</div>
+  <div class="card-info">2 HOUR(s)</div>
 </div>
 """
 

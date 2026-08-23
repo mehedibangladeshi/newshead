@@ -24,14 +24,19 @@ _BENGALI_ABSOLUTE_RE = re.compile(
     r"(?P<hour>[০-৯]{1,2}):(?P<minute>[০-৯]{2})\s*(?P<ampm>\S+)"
 )
 
+# Matches both "2 hours ago" (the generic phrase this was first written
+# against) and thedailystar.net's actual live markup, confirmed by fetching
+# it directly: "1 MIN(s)", "5 HOUR(s)" — an abbreviated unit, an optional
+# literal "(s)" plural marker, and no "ago" suffix at all.
 _RELATIVE_ENGLISH_RE = re.compile(
-    r"(?P<n>\d+)\s*(?P<unit>second|minute|hour|day|week|month|year)s?\s+ago",
+    r"(?P<n>\d+)\s*(?P<unit>sec|min|hour|day|week|month|year)[a-z]*"
+    r"\s*(?:\(s\))?\s*(?:ago)?",
     re.IGNORECASE,
 )
 
 _UNIT_SECONDS = {
-    "second": 1,
-    "minute": 60,
+    "sec": 1,
+    "min": 60,
     "hour": 3600,
     "day": 86400,
     "week": 604800,

@@ -30,7 +30,19 @@ String _formatRelative(Duration diff, bool isBengali) {
     return isBengali ? '${_toBengaliDigits('$hours')} ঘণ্টা আগে' : '${hours}h ago';
   }
   final days = hours ~/ 24;
-  return isBengali ? '${_toBengaliDigits('$days')} দিন আগে' : '${days}d ago';
+  if (days < 7) {
+    return isBengali ? '${_toBengaliDigits('$days')} দিন আগে' : '${days}d ago';
+  }
+  final weeks = days ~/ 7;
+  if (weeks < 5) {
+    return isBengali ? '${_toBengaliDigits('$weeks')} সপ্তাহ আগে' : '${weeks}w ago';
+  }
+  final months = days ~/ 30;
+  if (months < 12) {
+    return isBengali ? '${_toBengaliDigits('$months')} মাস আগে' : '${months}mo ago';
+  }
+  final years = days ~/ 365;
+  return isBengali ? '${_toBengaliDigits('$years')} বছর আগে' : '${years}y ago';
 }
 
 /// The absolute day/date and a live relative offset together, e.g.

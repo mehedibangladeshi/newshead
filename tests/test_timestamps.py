@@ -99,3 +99,13 @@ def test_parse_published_at_dailystar_returns_none_for_unrecognized_text():
 
 def test_parse_published_at_returns_none_for_an_unknown_source():
     assert parse_published_at("madeup", "2026-08-23T12:00:00+06:00", None) is None
+
+
+def test_parse_published_at_dailystar_abbreviated_minutes():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("dailystar", "1 MIN(s)", anchor) == "2026-08-23T13:59:00+06:00"
+
+
+def test_parse_published_at_dailystar_abbreviated_hours():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("dailystar", "5 HOUR(s)", anchor) == "2026-08-23T09:00:00+06:00"

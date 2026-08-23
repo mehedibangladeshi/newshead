@@ -42,4 +42,22 @@ void main() {
     final publishedAt = DateTime.now().subtract(const Duration(minutes: 5));
     expect(formatPublishedAt(publishedAt, 'en'), contains('ago'));
   });
+
+  test('formats weeks-ago relative time', () {
+    final publishedAt = DateTime(2026, 8, 10, 10, 0);
+    final now = DateTime(2026, 8, 23, 13, 0);
+    expect(formatPublishedAt(publishedAt, 'en', now: now), 'Mon, Aug 10 · 1w ago');
+  });
+
+  test('formats months-ago relative time', () {
+    final publishedAt = DateTime(2026, 6, 1, 10, 0);
+    final now = DateTime(2026, 8, 23, 13, 0);
+    expect(formatPublishedAt(publishedAt, 'en', now: now), 'Mon, Jun 1 · 2mo ago');
+  });
+
+  test('formats years-ago relative time', () {
+    final publishedAt = DateTime(2024, 8, 1, 10, 0);
+    final now = DateTime(2026, 8, 23, 13, 0);
+    expect(formatPublishedAt(publishedAt, 'en', now: now), 'Thu, Aug 1 · 2y ago');
+  });
 }
