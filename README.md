@@ -64,3 +64,10 @@ a category hides it immediately and the choice persists locally
 See `docs/superpowers/specs/2026-08-20-newshead-v1-design.md` for the full design,
 and `docs/superpowers/plans/2026-08-23-dynamic-categories-and-filters.md` for the
 category-filtering/timestamp/branding feature's implementation plan.
+
+### Release build
+
+Always build release APKs with `app/scripts/build_release_apk.sh` (splits the
+build into one APK per CPU architecture instead of one ~49MB universal APK).
+See `docs/release.md` for the full breakdown and why this is a script instead
+of a Gradle config flag.
