@@ -76,6 +76,32 @@ def classify_category(headline, section_name):
     return None
 
 
+# Explicit per-source, per-section-slug -> canonical-category overrides.
+# Checked before classify_category()'s keyword guessing; a section listed
+# here always wins outright for every article it contains, regardless of
+# headline text. A source's absent-or-empty dict, or a section with no
+# entry, falls through to keyword matching instead. Filled in per Task 14
+# once the taxonomy from docs/section-discovery-report.md is finalized.
+SECTION_CATEGORY_MAP = {
+    "jugantor": {},
+    "prothomalo": {},
+    "dhakatribune": {},
+    "dailystar": {},
+    "ittefaq": {},
+}
+
+
+def classify_article_category(source_slug, section_slug, section_name, headline):
+    """Resolve an article's canonical category: an explicit
+    SECTION_CATEGORY_MAP entry for this source+section wins outright;
+    otherwise fall back to keyword-matching the headline/section name.
+    Returns None (article dropped) if neither matches."""
+    mapped = SECTION_CATEGORY_MAP.get(source_slug, {}).get(section_slug)
+    if mapped is not None:
+        return mapped
+    return classify_category(headline, section_name)
+
+
 def make_article_id(source_slug, url):
     digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:10]
     return f"{source_slug}-{digest}"
@@ -155,7 +181,9 @@ def collect_source_articles(source_slug, edition_date):
         seen_urls.add(item["url"])
         articles.append(build_article(source_slug, source_name, "main", item, fallback_image_url))
 
-    # Remaining sections are classified by keyword into the 5 topic categories.
+    # Remaining sections are classified into canonical categories via
+    # SECTION_CATEGORY_MAP (explicit, wins outright) or, failing that,
+    # keyword matching.
     for slug, section_name in sections[1:]:
         try:
             items = source_module.list_articles(slug, edition_date)
@@ -166,7 +194,7 @@ def collect_source_articles(source_slug, edition_date):
         for item in items:
             if not item.get("url") or item["url"] in seen_urls:
                 continue
-            category = classify_category(item.get("headline", ""), section_name)
+            category = classify_article_category(source_slug, slug, section_name, item.get("headline", ""))
             if category is None:
                 continue
             item = enrich_item(source_module, item)

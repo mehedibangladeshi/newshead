@@ -1,7 +1,9 @@
 from scraper.generate_data import (
+    classify_article_category,
     classify_category,
     make_article_id,
     truncate_snippet,
+    SECTION_CATEGORY_MAP,
 )
 
 
@@ -53,3 +55,24 @@ def test_make_article_id_differs_for_different_urls():
     id1 = make_article_id("jugantor", "https://example.com/a")
     id2 = make_article_id("jugantor", "https://example.com/b")
     assert id1 != id2
+
+
+def test_classify_article_category_uses_explicit_mapping_when_present():
+    SECTION_CATEGORY_MAP.setdefault("testsource", {})["tech"] = "technology"
+    try:
+        # Headline would keyword-match "sports" if the mapping weren't
+        # checked first — explicit mapping must win outright.
+        result = classify_article_category("testsource", "tech", "Tech", "Cricket team wins")
+        assert result == "technology"
+    finally:
+        del SECTION_CATEGORY_MAP["testsource"]
+
+
+def test_classify_article_category_falls_back_to_keywords_when_unmapped():
+    result = classify_article_category("testsource", "unmapped-section", "Sports", "Local team wins the match")
+    assert result == "sports"
+
+
+def test_classify_article_category_returns_none_when_neither_matches():
+    result = classify_article_category("testsource", "unmapped-section", "Opinion", "A completely unrelated headline")
+    assert result is None
