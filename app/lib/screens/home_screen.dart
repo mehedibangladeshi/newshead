@@ -3,9 +3,13 @@ import 'package:http/http.dart' as http;
 
 import '../data/article_cache.dart';
 import '../data/article_repository.dart';
+import '../data/category_filter_store.dart';
+import '../data/category_visibility.dart';
 import '../models/app_category.dart';
 import '../models/news_article.dart';
+import '../widgets/brand_mark.dart';
 import 'category_feed.dart';
+import 'category_filter_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<NewsArticle> initialArticles;
@@ -14,6 +18,7 @@ class HomeScreen extends StatefulWidget {
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
+  final CategoryFilterStore filterStore;
 
   const HomeScreen({
     super.key,
@@ -23,6 +28,7 @@ class HomeScreen extends StatefulWidget {
     required this.sourceUrl,
     required this.client,
     required this.cache,
+    required this.filterStore,
   });
 
   @override
@@ -31,16 +37,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // TickerProviderStateMixin (not SingleTickerProviderStateMixin): a
-  // refresh that changes the category count disposes and recreates the
-  // TabController (see _handleRefresh/_initControllers below), vending a
-  // second ticker over this State's lifetime. SingleTickerProviderStateMixin
-  // throws unconditionally on a second createTicker call, even after the
-  // first ticker was disposed — so it can't support that.
-  // Large enough that a user could not plausibly swipe past either edge in a
-  // session, so category switching loops seamlessly in both directions
-  // (Miscellaneous -> Main, Main -> Miscellaneous) without true unbounded
-  // paging. Rounded down to a multiple of the category count so it starts
-  // on Main.
+  // refresh or filter change that changes the visible-category count
+  // disposes and recreates the TabController (see _initControllers below),
+  // vending a second ticker over this State's lifetime.
+  // Large enough that a user could not plausibly swipe past either edge in
+  // a session, so category switching loops seamlessly in both directions
+  // without true unbounded paging. Rounded down to a multiple of the
+  // category count so it starts on the first visible category.
   static const int _kLargePageBase = 100000;
 
   late TabController _tabController;
@@ -49,35 +52,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late List<NewsArticle> _articles;
   late List<AppCategory> _categories;
+  Set<String> _excludedCategoryKeys = {};
+  late List<AppCategory> _visibleCategories;
   String? _lastRawBody;
   // Bumped on every successful refresh so each CategoryFeed remounts fresh
   // (fresh PageController at the first article) instead of keeping its old
   // scroll position over reordered/changed content.
   int _refreshGeneration = 0;
-
-  static const List<String> _weekdayNames = [
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-    'Sat',
-    'Sun',
-  ];
-  static const List<String> _monthNames = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
 
   @override
   void initState() {
@@ -85,13 +66,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _articles = widget.initialArticles;
     _categories = widget.initialCategories;
     _lastRawBody = widget.initialRawBody;
-    _initControllers(_categories.length);
+    _visibleCategories = visibleCategories(
+      fetchedCategories: _categories,
+      articles: _articles,
+      excludedKeys: _excludedCategoryKeys,
+    );
+    _initControllers(_visibleCategories.length);
+    _loadExcludedCategoryKeys();
+  }
+
+  Future<void> _loadExcludedCategoryKeys() async {
+    final stored = await widget.filterStore.readExcludedKeys();
+    if (!mounted) return;
+    _applyExcludedKeys(stored);
+  }
+
+  void _applyExcludedKeys(Set<String> excludedKeys) {
+    final nextVisible = visibleCategories(
+      fetchedCategories: _categories,
+      articles: _articles,
+      excludedKeys: excludedKeys,
+    );
+    setState(() {
+      _excludedCategoryKeys = excludedKeys;
+      if (nextVisible.length != _visibleCategories.length) {
+        _disposeControllers();
+        _initControllers(nextVisible.length);
+      }
+      _visibleCategories = nextVisible;
+    });
+  }
+
+  void _handleFilterToggle(String categoryKey, bool isChecked) {
+    final next = {..._excludedCategoryKeys};
+    if (isChecked) {
+      next.remove(categoryKey);
+    } else {
+      next.add(categoryKey);
+    }
+    _applyExcludedKeys(next);
+    widget.filterStore.writeExcludedKeys(next);
+  }
+
+  void _openFilterSheet() {
+    showCategoryFilterSheet(
+      context: context,
+      allCategories: _categories,
+      excludedKeys: _excludedCategoryKeys,
+      onToggle: _handleFilterToggle,
+    );
   }
 
   void _initControllers(int n) {
     _tabController = TabController(length: n, vsync: this);
     _categoryPageController = PageController(
-      initialPage: (_kLargePageBase ~/ n) * n,
+      initialPage: n == 0 ? 0 : (_kLargePageBase ~/ n) * n,
     );
     _tabController.addListener(_onTabChanged);
   }
@@ -133,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // The nearest page (forward or backward) that lands on categoryIndex,
   // so the tab-tap animation takes the shortest path around the loop.
   int _nearestPageForCategory(int currentPage, int categoryIndex) {
-    final n = _categories.length;
+    final n = _visibleCategories.length;
     final currentCategoryIndex = currentPage % n;
     var diff = categoryIndex - currentCategoryIndex;
     if (diff > n / 2) diff -= n;
@@ -143,15 +172,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _onCategoryPageChanged(int page) {
     _isSyncingFromPage = true;
-    _tabController.index = page % _categories.length;
+    _tabController.index = page % _visibleCategories.length;
     _isSyncingFromPage = false;
-  }
-
-  String _todayLabel() {
-    final now = DateTime.now();
-    final weekday = _weekdayNames[now.weekday - 1];
-    final month = _monthNames[now.month - 1];
-    return '$weekday, $month ${now.day}';
   }
 
   // Pulled from any category feed. Re-fetches from the shared source; if the
@@ -182,15 +204,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     if (!mounted) return;
+    final nextVisible = visibleCategories(
+      fetchedCategories: result.categories,
+      articles: articles,
+      excludedKeys: _excludedCategoryKeys,
+    );
     setState(() {
       _articles = articles;
       _lastRawBody = result.rawBody;
       _refreshGeneration++;
-      if (result.categories.length != _categories.length) {
-        _disposeControllers();
-        _initControllers(result.categories.length);
-      }
       _categories = result.categories;
+      if (nextVisible.length != _visibleCategories.length) {
+        _disposeControllers();
+        _initControllers(nextVisible.length);
+      }
+      _visibleCategories = nextVisible;
     });
   }
 
@@ -200,81 +228,105 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // The date sits in its own row, in normal layout flow, so it
-          // never shares space with the status bar / notch / Dynamic
-          // Island, and the image below never starts underneath them.
           ColoredBox(
             color: const Color(0xFF121212),
             child: SafeArea(
               bottom: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                child: Text(
-                  _todayLabel(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const BrandMark(),
+                    IconButton(
+                      onPressed: _openFilterSheet,
+                      icon: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Icon(Icons.tune, color: Colors.white70),
+                          if (_excludedCategoryKeys.isNotEmpty)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                key: const Key('filterActiveBadge'),
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE1483A),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
           Expanded(
-            child: PageView.builder(
-              // Keyed on the controller's identity so a controller swap
-              // (see _handleRefresh, which creates a brand-new
-              // PageController when the category count changes) forces a
-              // full remount of this widget instead of just reattaching a
-              // new controller to the same underlying Scrollable state —
-              // otherwise the visible page can stay desynced from the
-              // freshly-reset TabController.
-              key: ObjectKey(_categoryPageController),
-              controller: _categoryPageController,
-              onPageChanged: _onCategoryPageChanged,
-              itemBuilder: (context, page) {
-                final category = _categories[page % _categories.length];
-                return CategoryFeed(
-                  key: PageStorageKey('${category.key}#$_refreshGeneration'),
-                  category: category.key,
-                  articles: articlesForCategory(_articles, category.key),
-                  onRefresh: _handleRefresh,
-                );
-              },
-            ),
+            child: _visibleCategories.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No stories yet',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  )
+                : PageView.builder(
+                    // Keyed on the controller's identity so a controller swap
+                    // (see _applyExcludedKeys/_handleRefresh, which create a
+                    // brand-new PageController when the visible-category
+                    // count changes) forces a full remount of this widget.
+                    key: ObjectKey(_categoryPageController),
+                    controller: _categoryPageController,
+                    onPageChanged: _onCategoryPageChanged,
+                    itemBuilder: (context, page) {
+                      final category = _visibleCategories[page % _visibleCategories.length];
+                      return CategoryFeed(
+                        key: PageStorageKey('${category.key}#$_refreshGeneration'),
+                        category: category.key,
+                        articles: articlesForCategory(_articles, category.key),
+                        onRefresh: _handleRefresh,
+                      );
+                    },
+                  ),
           ),
         ],
       ),
-      bottomNavigationBar: ColoredBox(
-        color: const Color(0xFF121212),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ListenableBuilder(
-                listenable: _tabController,
-                builder: (context, _) {
-                  return Row(
-                    children: [
-                      for (var i = 0; i < _categories.length; i++)
-                        Padding(
-                          padding: EdgeInsets.only(left: i == 0 ? 0 : 10),
-                          child: _CategoryPill(
-                            label: _categories[i].label,
-                            selected: _tabController.index == i,
-                            onTap: () => _tabController.animateTo(i),
-                          ),
-                        ),
-                    ],
-                  );
-                },
+      bottomNavigationBar: _visibleCategories.isEmpty
+          ? null
+          : ColoredBox(
+              color: const Color(0xFF121212),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ListenableBuilder(
+                      listenable: _tabController,
+                      builder: (context, _) {
+                        return Row(
+                          children: [
+                            for (var i = 0; i < _visibleCategories.length; i++)
+                              Padding(
+                                padding: EdgeInsets.only(left: i == 0 ? 0 : 10),
+                                child: _CategoryPill(
+                                  label: _visibleCategories[i].label,
+                                  selected: _tabController.index == i,
+                                  onTap: () => _tabController.animateTo(i),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
