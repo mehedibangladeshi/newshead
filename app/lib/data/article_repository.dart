@@ -3,8 +3,31 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/app_category.dart';
 import '../models/news_article.dart';
 import 'article_cache.dart';
+
+const kDefaultCategories = [AppCategory(key: 'main', label: 'Main')];
+
+List<AppCategory> parseCategories(String jsonString) {
+  final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+  final rawCategories = decoded['categories'] as List<dynamic>?;
+  if (rawCategories == null || rawCategories.isEmpty) return kDefaultCategories;
+
+  final categories = <AppCategory>[];
+  for (final raw in rawCategories) {
+    try {
+      final map = raw as Map<String, dynamic>;
+      categories.add(AppCategory(
+        key: map['key'] as String,
+        label: map['label'] as String,
+      ));
+    } catch (_) {
+      continue;
+    }
+  }
+  return categories.isEmpty ? kDefaultCategories : categories;
+}
 
 List<NewsArticle> parseArticles(String jsonString) {
   final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
@@ -36,6 +59,7 @@ List<NewsArticle> articlesForCategory(List<NewsArticle> all, String category) {
 
 class ArticlesFetchResult {
   final List<NewsArticle> articles;
+  final List<AppCategory> categories;
   // The raw response/cache body this came from, so a later fetch can tell
   // whether the source actually returned new content.
   final String? rawBody;
@@ -45,6 +69,7 @@ class ArticlesFetchResult {
 
   const ArticlesFetchResult({
     required this.articles,
+    required this.categories,
     required this.rawBody,
     required this.fromNetwork,
   });
@@ -59,6 +84,7 @@ Future<ArticlesFetchResult> fetchArticles({
     final response = await client.get(sourceUrl);
     if (response.statusCode == 200) {
       final articles = parseArticles(response.body);
+      final categories = parseCategories(response.body);
       try {
         await cache.write(response.body);
       } catch (_) {
@@ -67,6 +93,7 @@ Future<ArticlesFetchResult> fetchArticles({
       }
       return ArticlesFetchResult(
         articles: articles,
+        categories: categories,
         rawBody: response.body,
         fromNetwork: true,
       );
@@ -81,13 +108,24 @@ Future<ArticlesFetchResult> fetchArticles({
     try {
       return ArticlesFetchResult(
         articles: parseArticles(cached),
+        categories: parseCategories(cached),
         rawBody: cached,
         fromNetwork: false,
       );
     } catch (error) {
       debugPrint('fetchArticles: failed to parse cached articles: $error');
-      return const ArticlesFetchResult(articles: [], rawBody: null, fromNetwork: false);
+      return const ArticlesFetchResult(
+        articles: [],
+        categories: kDefaultCategories,
+        rawBody: null,
+        fromNetwork: false,
+      );
     }
   }
-  return const ArticlesFetchResult(articles: [], rawBody: null, fromNetwork: false);
+  return const ArticlesFetchResult(
+    articles: [],
+    categories: kDefaultCategories,
+    rawBody: null,
+    fromNetwork: false,
+  );
 }

@@ -3,6 +3,7 @@ import 'package:newshead/data/article_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:newshead/data/article_cache.dart';
+import 'package:newshead/models/app_category.dart';
 
 class InMemoryArticleCache implements ArticleCache {
   String? stored;
@@ -34,9 +35,23 @@ class ThrowingWriteArticleCache implements ArticleCache {
 const _validJson = '''
 {
   "generated_at": "2026-08-20",
+  "categories": [
+    {"key": "main", "label": "Main"},
+    {"key": "politics", "label": "Politics"},
+    {"key": "sports", "label": "Sports"}
+  ],
   "articles": [
     {"id": "a1", "category": "politics", "source": "Jugantor", "headline": "H1", "snippet": "S1", "imageUrl": "https://example.com/1.jpg", "articleUrl": "https://example.com/a1"},
     {"id": "a2", "category": "sports", "source": "Ittefaq", "headline": "H2", "snippet": "S2", "imageUrl": "https://example.com/2.jpg", "articleUrl": "https://example.com/a2"}
+  ]
+}
+''';
+
+const _jsonWithoutCategories = '''
+{
+  "generated_at": "2026-08-20",
+  "articles": [
+    {"id": "a1", "category": "politics", "source": "Jugantor", "headline": "H1", "snippet": "S1", "imageUrl": "https://example.com/1.jpg", "articleUrl": "https://example.com/a1"}
   ]
 }
 ''';
@@ -170,5 +185,48 @@ void main() {
     expect(result.articles.length, 2);
     expect(result.articles[0].id, 'a1');
     expect(result.fromNetwork, isTrue);
+  });
+
+  test('parseCategories parses every category in order', () {
+    final categories = parseCategories(_validJson);
+    expect(categories, [
+      const AppCategory(key: 'main', label: 'Main'),
+      const AppCategory(key: 'politics', label: 'Politics'),
+      const AppCategory(key: 'sports', label: 'Sports'),
+    ]);
+  });
+
+  test('parseCategories returns the default list when categories is missing', () {
+    expect(parseCategories(_jsonWithoutCategories), kDefaultCategories);
+  });
+
+  test('fetchArticles returns parsed categories from a successful response', () async {
+    final client = MockClient((request) async => http.Response(_validJson, 200));
+    final cache = InMemoryArticleCache();
+
+    final result = await fetchArticles(
+      sourceUrl: Uri.parse('https://example.com/articles.json'),
+      client: client,
+      cache: cache,
+    );
+
+    expect(result.categories, [
+      const AppCategory(key: 'main', label: 'Main'),
+      const AppCategory(key: 'politics', label: 'Politics'),
+      const AppCategory(key: 'sports', label: 'Sports'),
+    ]);
+  });
+
+  test('fetchArticles falls back to kDefaultCategories when there is no cache and no network', () async {
+    final client = MockClient((request) async => throw Exception('network down'));
+    final cache = InMemoryArticleCache();
+
+    final result = await fetchArticles(
+      sourceUrl: Uri.parse('https://example.com/articles.json'),
+      client: client,
+      cache: cache,
+    );
+
+    expect(result.categories, kDefaultCategories);
   });
 }
