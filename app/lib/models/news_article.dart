@@ -6,6 +6,8 @@ class NewsArticle {
   final String snippet;
   final String imageUrl;
   final String articleUrl;
+  final String language;
+  final DateTime? publishedAt;
 
   const NewsArticle({
     required this.id,
@@ -15,5 +17,7 @@ class NewsArticle {
     required this.snippet,
     required this.imageUrl,
     required this.articleUrl,
+    this.language = 'en',
+    this.publishedAt,
   });
 }

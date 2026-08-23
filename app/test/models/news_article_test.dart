@@ -21,4 +21,37 @@ void main() {
     expect(article.imageUrl, 'https://example.com/image.jpg');
     expect(article.articleUrl, 'https://example.com/article');
   });
+
+  test('language defaults to en and publishedAt defaults to null when omitted', () {
+    const article = NewsArticle(
+      id: 'a1',
+      category: 'politics',
+      source: 'Jugantor',
+      headline: 'H',
+      snippet: 'S',
+      imageUrl: 'https://example.com/i.jpg',
+      articleUrl: 'https://example.com/a',
+    );
+
+    expect(article.language, 'en');
+    expect(article.publishedAt, isNull);
+  });
+
+  test('stores language and publishedAt when provided', () {
+    final publishedAt = DateTime.utc(2026, 8, 23, 10, 0);
+    final article = NewsArticle(
+      id: 'a1',
+      category: 'politics',
+      source: 'Jugantor',
+      headline: 'H',
+      snippet: 'S',
+      imageUrl: 'https://example.com/i.jpg',
+      articleUrl: 'https://example.com/a',
+      language: 'bn',
+      publishedAt: publishedAt,
+    );
+
+    expect(article.language, 'bn');
+    expect(article.publishedAt, publishedAt);
+  });
 }
