@@ -87,9 +87,13 @@ def _get(url):
     return response.text
 
 
-def parse_sections(html):
+def parse_sections(html, include_all=False):
     """Pure parsing step for discover_sections; takes the homepage's raw
-    HTML, returns a list of (slug, section_name) or [] if none were found."""
+    HTML, returns a list of (slug, section_name) or [] if none were found.
+
+    include_all=True bypasses CORE_SECTION_SLUGS (see its comment above) —
+    used only by scripts/discover_sections.py to audit the real nav;
+    production discovery (include_all=False) is unchanged."""
     soup = BeautifulSoup(html, "html.parser")
 
     sections = []
@@ -100,7 +104,9 @@ def parse_sections(html):
         if parsed.netloc and parsed.netloc != "www.ittefaq.com.bd":
             continue
         slug = parsed.path.strip("/")
-        if slug not in CORE_SECTION_SLUGS or slug in seen_slugs:
+        if not slug or slug in seen_slugs:
+            continue
+        if not include_all and slug not in CORE_SECTION_SLUGS:
             continue
         name = _text(link)
         if not name:
@@ -111,14 +117,14 @@ def parse_sections(html):
     return sections
 
 
-def discover_sections():
+def discover_sections(include_all=False):
     try:
         html = _get(BASE_URL)
     except requests.RequestException:
         logger.warning("Could not reach %s, using fallback section list", BASE_URL)
         return list(FALLBACK_SECTIONS)
 
-    sections = parse_sections(html)
+    sections = parse_sections(html, include_all=include_all)
     if not sections:
         logger.warning("No sections discovered on %s, using fallback list", BASE_URL)
         return list(FALLBACK_SECTIONS)
