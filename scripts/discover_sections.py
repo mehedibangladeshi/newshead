@@ -30,8 +30,8 @@ def discover_all_sections():
     try/except pattern."""
     results = {}
     for source_slug in config.SOURCES:
-        module = importlib.import_module(f"scraper.sources.{source_slug}")
         try:
+            module = importlib.import_module(f"scraper.sources.{source_slug}")
             sections = module.discover_sections(include_all=True)
         except Exception as exc:
             logger.warning("Skipping %s: could not discover sections: %s", source_slug, exc)

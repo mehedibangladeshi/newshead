@@ -161,3 +161,15 @@ def test_classify_category_matches_new_category_keywords():
     assert classify_category("Remittance inflows rise this quarter", "Expat") == "expat"
     assert classify_category("Dhaka traffic causes delays downtown", "City") == "city"
     assert classify_category("Nationwide protests planned for next week", "Country") == "country"
+
+
+def test_section_category_map_values_are_all_valid_category_keys():
+    # A mistyped/removed category value in any source's SECTION_CATEGORY_MAP
+    # silently vanishes from interleave_by_source's CATEGORIES + ["main"]
+    # iteration with no error - this catches that regression cheaply.
+    valid_keys = {key for key, _label in CATEGORY_DEFINITIONS}
+    for source_slug, section_map in SECTION_CATEGORY_MAP.items():
+        for section_slug, category in section_map.items():
+            assert category in valid_keys, (
+                f"{source_slug!r}[{section_slug!r}] maps to unknown category {category!r}"
+            )

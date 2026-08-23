@@ -1,11 +1,11 @@
 # NewsHead
 
 A self-scraping news app: a Python pipeline scrapes 5 Bengali/English newspapers
-4x/day, classifies articles into 6 categories, and publishes the result to GitHub
-Pages. The Flutter app fetches that JSON at launch and presents it as a
-reels-style (TikTok/Instagram-like) vertical, swipeable card feed that loops
-seamlessly in both directions — never a dead end scrolling down or between
-categories.
+4x/day, classifies articles into a 17-category taxonomy (16 topics plus a
+per-source Main), and publishes the result to GitHub Pages. The Flutter app
+fetches that JSON at launch and presents it as a reels-style
+(TikTok/Instagram-like) vertical, swipeable card feed that loops seamlessly in
+both directions — never a dead end scrolling down or between categories.
 
 ## Scraper
 
@@ -19,6 +19,10 @@ python3 -m venv .venv
 `.github/workflows/scrape.yml` runs this automatically 4x/day (7 AM / 11 AM / 4 PM /
 8 PM Asia/Dhaka) and publishes `articles.json` to the `gh-pages` branch, served at
 `https://mehedibangladeshi.github.io/newshead/articles.json`.
+
+Use `scripts/discover_sections.py` to audit each source's full raw navigation
+(bypassing the per-source discovery allowlists) when auditing or redesigning
+the category taxonomy later.
 
 ## App
 
