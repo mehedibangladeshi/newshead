@@ -98,3 +98,21 @@ def test_interleave_by_source_keeps_every_article_for_a_single_source():
     articles = [{"category": "main", "source": "A", "id": f"a{i}"} for i in range(20)]
     result = interleave_by_source(articles)
     assert len(result) == 20
+
+
+from scraper.generate_data import build_output, CATEGORY_DEFINITIONS
+
+
+def test_build_output_includes_ordered_category_definitions():
+    output = build_output("2026-08-23", [])
+    assert output["generated_at"] == "2026-08-23"
+    assert output["categories"] == [
+        {"key": key, "label": label} for key, label in CATEGORY_DEFINITIONS
+    ]
+    assert output["categories"][0]["key"] == "main"
+
+
+def test_build_output_includes_the_given_articles():
+    articles = [{"id": "a1", "category": "main"}]
+    output = build_output("2026-08-23", articles)
+    assert output["articles"] == articles

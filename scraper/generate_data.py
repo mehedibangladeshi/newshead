@@ -25,7 +25,24 @@ DHAKA_TZ = ZoneInfo("Asia/Dhaka")
 
 OUTPUT_PATH = os.path.join(config.PROJECT_ROOT, "articles.json")
 
-CATEGORIES = ["politics", "world", "bangladesh", "sports", "finance"]
+# Single source of truth for the app's canonical category taxonomy: key,
+# display label, in display order ("main" always first). Edited as part of
+# Task 14 once the taxonomy from docs/section-discovery-report.md is
+# finalized — today's 5 keyword-classified categories are the placeholder
+# starting point, unchanged in meaning from before this pass.
+CATEGORY_DEFINITIONS = [
+    ("main", "Main"),
+    ("politics", "Politics"),
+    ("world", "World"),
+    ("bangladesh", "Bangladesh"),
+    ("sports", "Sports"),
+    ("finance", "Finance"),
+]
+
+# Non-"main" category keys, in the order interleave_by_source() should
+# process them — derived from CATEGORY_DEFINITIONS so there's one place to
+# edit when the taxonomy changes.
+CATEGORIES = [key for key, _label in CATEGORY_DEFINITIONS if key != "main"]
 
 SOURCE_DISPLAY_NAMES = {
     "jugantor": "Jugantor",
@@ -226,6 +243,15 @@ def interleave_by_source(all_articles):
     return interleaved
 
 
+def build_output(edition_date, articles):
+    """Pure assembly of the published JSON shape."""
+    return {
+        "generated_at": edition_date,
+        "categories": [{"key": key, "label": label} for key, label in CATEGORY_DEFINITIONS],
+        "articles": articles,
+    }
+
+
 def main():
     edition_date = datetime.now(DHAKA_TZ).date().isoformat()
 
@@ -245,10 +271,7 @@ def main():
         logger.error("No articles were scraped from any source; not writing output.")
         raise SystemExit(1)
 
-    output = {
-        "generated_at": edition_date,
-        "articles": interleaved_articles,
-    }
+    output = build_output(edition_date, interleaved_articles)
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
