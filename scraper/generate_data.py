@@ -26,8 +26,6 @@ DHAKA_TZ = ZoneInfo("Asia/Dhaka")
 OUTPUT_PATH = os.path.join(config.PROJECT_ROOT, "articles.json")
 
 CATEGORIES = ["politics", "world", "bangladesh", "sports", "finance"]
-ARTICLES_PER_CATEGORY_CAP = 12
-MAIN_ARTICLES_PER_SOURCE = 2
 
 SOURCE_DISPLAY_NAMES = {
     "jugantor": "Jugantor",
@@ -174,7 +172,7 @@ def collect_source_articles(source_slug, edition_date):
         logger.warning("Skipping %s section %s: %s", source_slug, main_slug, exc)
         main_items = []
 
-    for item in main_items[:MAIN_ARTICLES_PER_SOURCE]:
+    for item in main_items:
         if not item.get("url") or item["url"] in seen_urls:
             continue
         item = enrich_item(source_module, item)
@@ -204,7 +202,10 @@ def collect_source_articles(source_slug, edition_date):
     return articles
 
 
-def cap_per_category(all_articles):
+def interleave_by_source(all_articles):
+    """Round-robins articles across sources within each category, so the
+    feed doesn't front-load one source's articles before ever showing
+    another's — but keeps every article (no count ceiling)."""
     by_category_source = defaultdict(lambda: defaultdict(deque))
     source_order = defaultdict(list)
     for article in all_articles:
@@ -214,21 +215,15 @@ def cap_per_category(all_articles):
             source_order[category].append(source)
         by_category_source[category][source].append(article)
 
-    capped = []
+    interleaved = []
     for category in CATEGORIES + ["main"]:
         sources = source_order.get(category, [])
-        count = 0
-        while count < ARTICLES_PER_CATEGORY_CAP and any(
-            by_category_source[category][s] for s in sources
-        ):
+        while any(by_category_source[category][s] for s in sources):
             for source in sources:
-                if count >= ARTICLES_PER_CATEGORY_CAP:
-                    break
                 queue = by_category_source[category][source]
                 if queue:
-                    capped.append(queue.popleft())
-                    count += 1
-    return capped
+                    interleaved.append(queue.popleft())
+    return interleaved
 
 
 def main():
@@ -244,21 +239,21 @@ def main():
         logger.info("%s: collected %d article(s)", source_slug, len(source_articles))
         all_articles.extend(source_articles)
 
-    capped_articles = cap_per_category(all_articles)
+    interleaved_articles = interleave_by_source(all_articles)
 
-    if not capped_articles:
+    if not interleaved_articles:
         logger.error("No articles were scraped from any source; not writing output.")
         raise SystemExit(1)
 
     output = {
         "generated_at": edition_date,
-        "articles": capped_articles,
+        "articles": interleaved_articles,
     }
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    logger.info("Wrote %d article(s) to %s", len(capped_articles), OUTPUT_PATH)
+    logger.info("Wrote %d article(s) to %s", len(interleaved_articles), OUTPUT_PATH)
 
 
 if __name__ == "__main__":

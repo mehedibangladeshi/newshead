@@ -76,3 +76,25 @@ def test_classify_article_category_falls_back_to_keywords_when_unmapped():
 def test_classify_article_category_returns_none_when_neither_matches():
     result = classify_article_category("testsource", "unmapped-section", "Opinion", "A completely unrelated headline")
     assert result is None
+
+
+from scraper.generate_data import interleave_by_source
+
+
+def test_interleave_by_source_round_robins_without_a_cap():
+    articles = (
+        [{"category": "sports", "source": "A", "id": f"a{i}"} for i in range(5)]
+        + [{"category": "sports", "source": "B", "id": f"b{i}"} for i in range(2)]
+    )
+    result = interleave_by_source(articles)
+    ids = [a["id"] for a in result]
+    # Round-robin across sources: A,B,A,B,A,A,A — every article kept, none
+    # capped, but B's 2 articles aren't pushed to the back of the list.
+    assert ids == ["a0", "b0", "a1", "b1", "a2", "a3", "a4"]
+    assert len(result) == 7
+
+
+def test_interleave_by_source_keeps_every_article_for_a_single_source():
+    articles = [{"category": "main", "source": "A", "id": f"a{i}"} for i in range(20)]
+    result = interleave_by_source(articles)
+    assert len(result) == 20
