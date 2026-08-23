@@ -15,6 +15,7 @@ Future<void> showCategoryFilterSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     backgroundColor: const Color(0xFF171310),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
