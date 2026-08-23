@@ -3,20 +3,13 @@ import 'package:http/http.dart' as http;
 
 import '../data/article_cache.dart';
 import '../data/article_repository.dart';
+import '../models/app_category.dart';
 import '../models/news_article.dart';
 import 'category_feed.dart';
 
-const List<({String label, String key})> kCategories = [
-  (label: 'Main', key: 'main'),
-  (label: 'Politics', key: 'politics'),
-  (label: 'World', key: 'world'),
-  (label: 'Bangladesh', key: 'bangladesh'),
-  (label: 'Sports', key: 'sports'),
-  (label: 'Finance', key: 'finance'),
-];
-
 class HomeScreen extends StatefulWidget {
   final List<NewsArticle> initialArticles;
+  final List<AppCategory> initialCategories;
   final String? initialRawBody;
   final Uri sourceUrl;
   final http.Client client;
@@ -25,6 +18,7 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.initialArticles,
+    required this.initialCategories,
     required this.initialRawBody,
     required this.sourceUrl,
     required this.client,
@@ -43,11 +37,12 @@ class _HomeScreenState extends State<HomeScreen>
   // Rounded down to a multiple of the category count so it starts on Main.
   static const int _kLargePageBase = 100000;
 
-  late final TabController _tabController;
-  late final PageController _categoryPageController;
+  late TabController _tabController;
+  late PageController _categoryPageController;
   bool _isSyncingFromPage = false;
 
   late List<NewsArticle> _articles;
+  late List<AppCategory> _categories;
   String? _lastRawBody;
   // Bumped on every successful refresh so each CategoryFeed remounts fresh
   // (fresh PageController at the first article) instead of keeping its old
@@ -82,8 +77,12 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _articles = widget.initialArticles;
+    _categories = widget.initialCategories;
     _lastRawBody = widget.initialRawBody;
-    final n = kCategories.length;
+    _initControllers(_categories.length);
+  }
+
+  void _initControllers(int n) {
     _tabController = TabController(length: n, vsync: this);
     _categoryPageController = PageController(
       initialPage: (_kLargePageBase ~/ n) * n,
@@ -91,11 +90,15 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController.addListener(_onTabChanged);
   }
 
-  @override
-  void dispose() {
+  void _disposeControllers() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _categoryPageController.dispose();
+  }
+
+  @override
+  void dispose() {
+    _disposeControllers();
     super.dispose();
   }
 
@@ -124,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen>
   // The nearest page (forward or backward) that lands on categoryIndex,
   // so the tab-tap animation takes the shortest path around the loop.
   int _nearestPageForCategory(int currentPage, int categoryIndex) {
-    final n = kCategories.length;
+    final n = _categories.length;
     final currentCategoryIndex = currentPage % n;
     var diff = categoryIndex - currentCategoryIndex;
     if (diff > n / 2) diff -= n;
@@ -134,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _onCategoryPageChanged(int page) {
     _isSyncingFromPage = true;
-    _tabController.index = page % kCategories.length;
+    _tabController.index = page % _categories.length;
     _isSyncingFromPage = false;
   }
 
@@ -177,6 +180,11 @@ class _HomeScreenState extends State<HomeScreen>
       _articles = articles;
       _lastRawBody = result.rawBody;
       _refreshGeneration++;
+      if (result.categories.length != _categories.length) {
+        _disposeControllers();
+        _initControllers(result.categories.length);
+      }
+      _categories = result.categories;
     });
   }
 
@@ -211,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen>
               controller: _categoryPageController,
               onPageChanged: _onCategoryPageChanged,
               itemBuilder: (context, page) {
-                final category = kCategories[page % kCategories.length];
+                final category = _categories[page % _categories.length];
                 return CategoryFeed(
                   key: PageStorageKey('${category.key}#$_refreshGeneration'),
                   category: category.key,
@@ -236,11 +244,11 @@ class _HomeScreenState extends State<HomeScreen>
                 builder: (context, _) {
                   return Row(
                     children: [
-                      for (var i = 0; i < kCategories.length; i++)
+                      for (var i = 0; i < _categories.length; i++)
                         Padding(
                           padding: EdgeInsets.only(left: i == 0 ? 0 : 10),
                           child: _CategoryPill(
-                            label: kCategories[i].label,
+                            label: _categories[i].label,
                             selected: _tabController.index == i,
                             onTap: () => _tabController.animateTo(i),
                           ),
