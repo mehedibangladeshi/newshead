@@ -91,11 +91,15 @@ def _section_slug(url):
     return path.split("/", 1)[0] if path else ""
 
 
-def parse_todays_news(html):
+def parse_todays_news(html, include_all=False):
     """Pure parsing step; takes /todays-news' raw HTML, returns a dict of
     {section_slug: [article dict, ...]}, deduped by URL across the whole
-    page (the same story commonly appears in more than one listing widget),
-    excluding EXCLUDED_SECTION_SLUGS entirely."""
+    page (the same story commonly appears in more than one listing widget).
+
+    include_all=True keeps EXCLUDED_SECTION_SLUGS sections (e.g. the
+    "star-multimedia" video hub) instead of dropping them — used only by
+    scripts/discover_sections.py to audit the real nav; production grouping
+    (include_all=False) is unchanged."""
     soup = BeautifulSoup(html, "html.parser")
 
     grouped = {}
@@ -110,7 +114,7 @@ def parse_todays_news(html):
             continue
 
         slug = _section_slug(url)
-        if not slug or slug in EXCLUDED_SECTION_SLUGS:
+        if not slug or (not include_all and slug in EXCLUDED_SECTION_SLUGS):
             continue
         seen_urls.add(url)
 
@@ -129,16 +133,17 @@ def parse_todays_news(html):
     return grouped
 
 
-def _get_grouped_listing():
-    if "grouped" not in _listing_cache:
+def _get_grouped_listing(include_all=False):
+    cache_key = "grouped_all" if include_all else "grouped"
+    if cache_key not in _listing_cache:
         html = _get(TODAYS_NEWS_URL)
-        _listing_cache["grouped"] = parse_todays_news(html)
-    return _listing_cache["grouped"]
+        _listing_cache[cache_key] = parse_todays_news(html, include_all=include_all)
+    return _listing_cache[cache_key]
 
 
-def discover_sections():
+def discover_sections(include_all=False):
     try:
-        grouped = _get_grouped_listing()
+        grouped = _get_grouped_listing(include_all=include_all)
     except requests.RequestException:
         logger.warning("Could not reach %s, using fallback section list", TODAYS_NEWS_URL)
         return list(FALLBACK_SECTIONS)
