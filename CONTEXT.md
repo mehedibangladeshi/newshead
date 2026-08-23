@@ -13,7 +13,7 @@ One of the app's own fixed set of topic buckets (e.g. `politics`, `sports`) that
 _Avoid_: Topic, section (when meaning the app-facing bucket)
 
 **Main**:
-A special Canonical Category, separate from the topic taxonomy, holding each source's front-page/latest listing (always that source's first discovered Source Section). Not reached via the Section→Category Mapping — assigned unconditionally, one per source.
+A special Canonical Category, separate from the topic taxonomy, holding each source's first successfully-discovered section (always that source's first discovered Source Section) — which is that source's actual front page for some sources, and simply the first allowlisted topical section for others (e.g. Dhaka Tribune, Ittefaq, where a genuine front-page/aggregator page is deliberately excluded from discovery). Not reached via the Section→Category Mapping — assigned unconditionally, one per source.
 
 **Section→Category Mapping**:
 The explicit, per-source lookup table (`{source_slug: {section_slug: canonical_category}}`) that decides an article's Canonical Category from the Source Section it was listed under. Takes priority over keyword classification; a Source Section with no entry falls through to keyword matching instead of being classified directly. A Source Section that matches neither is dropped, same as today.

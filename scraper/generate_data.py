@@ -180,9 +180,13 @@ SECTION_CATEGORY_MAP = {
         "lifestyle": "lifestyle",
     },
     "dhakatribune": {
-        # sections[0] "latest-news" is Main, excluded. "others",
+        # sections[0] is "bangladesh" (Main) - the first allowlisted
+        # topical section in nav order, not the genuine front page;
+        # "latest-news", the real front-page/aggregator, is deliberately
+        # excluded from discovery (see CORE_SECTION_SLUGS in
+        # scraper/sources/dhakatribune.py), along with "others",
         # "around-the-web", "photo-gallery", "magazine-archive", and
-        # "archive" are pre-filtered and stay unmapped.
+        # "archive", which stay unmapped.
         "bangladesh": "country",
         "bangladesh/dhaka": "city",
         "bangladesh/education": "education",
@@ -246,10 +250,13 @@ SECTION_CATEGORY_MAP = {
         "health": "health",
     },
     "ittefaq": {
-        # sections[0] "home" is Main, excluded. "latest-news", utility
-        # pages, "archive", the unicode converter, "jobs", media hubs,
-        # transient topic tag pages, and numeric-ID article permalinks are
-        # pre-filtered and stay unmapped.
+        # sections[0] is "editorial" (Main) - the first allowlisted topical
+        # section in nav order, not the genuine front page; "home", the
+        # real front page, is deliberately excluded from discovery (see
+        # CORE_SECTION_SLUGS in scraper/sources/ittefaq.py). "latest-news",
+        # utility pages, "archive", the unicode converter, "jobs", media
+        # hubs, transient topic tag pages, and numeric-ID article
+        # permalinks are pre-filtered and stay unmapped.
         "editorial": "opinion",
         "national": "country",
         "capital": "city",

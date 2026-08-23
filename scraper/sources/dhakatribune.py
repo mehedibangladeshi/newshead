@@ -22,19 +22,66 @@ SOURCE_NAME = "Dhaka Tribune"
 # with subcategories, an aggregate "News" page, and vague catch-alls ("More",
 # "Magazine") - unlike Jugantor/Prothom Alo's flatter navs, a generic filter
 # rule (single path segment, etc.) can't tell those apart. This is a curated
-# allowlist instead, confirmed against the live nav during development.
+# allowlist instead, matching the full set of sections the app's owner
+# dictated a category mapping for (see SECTION_CATEGORY_MAP["dhakatribune"]
+# in scraper/generate_data.py). It still excludes genuine non-content nav
+# items: "latest-news" (the real front page/aggregator, deliberately
+# excluded - see the "Main" note in generate_data.py) and the "others"
+# ("More"), "around-the-web", "photo-gallery", "magazine-archive", and
+# "archive" catch-alls (confirmed against docs/section-discovery-report.md's
+# full raw nav dump).
 # "Bangladesh" - the flagship section - is nested one level under a "News"
 # dropdown in the real menu, not top-level itself; parse_sections() below
 # scans the whole nav (not just top-level items) so it's still found.
 CORE_SECTION_SLUGS = {
     "bangladesh",
-    "world",
+    "bangladesh/dhaka",
+    "bangladesh/education",
+    "bangladesh/election",
+    "bangladesh/foreign-affairs",
+    "bangladesh/nation",
+    "bangladesh/politics",
+    "bangladesh/weather",
+    "bangladesh/campus1",
+    "bangladesh/accidents",
     "business",
+    "business/economy",
+    "business/banks",
+    "business/commerce",
+    "business/stock",
+    "business/real-estate",
+    "world",
+    "world/asia",
+    "world/south-asia",
+    "world/africa",
+    "world/middle-east",
+    "world/europe",
+    "world/north-america",
     "sport",
+    "sport/cricket",
+    "sport/football",
+    "sport/tennis",
+    "sport/athletics",
+    "sport/formula-one",
+    "sport/other-sports",
     "opinion",
+    "opinion/op-ed",
+    "opinion/editorial",
+    "opinion/longform",
     "showtime",
     "feature",
+    "magazine-1",
     "arts-and-letters",
+    "arts-and-letters/poetry",
+    "arts-and-letters/book-review",
+    "arts-and-letters/fiction",
+    "arts-and-letters/tribute",
+    "arts-and-letters/non-fiction",
+    "arts-and-letters/essay",
+    "tribune-z",
+    "science-technology-environment",
+    "interviews-and-dialogue",
+    "brief",
 }
 
 # Used only if live discovery finds nothing (defensive fallback), in the
