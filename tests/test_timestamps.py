@@ -36,7 +36,7 @@ def test_parse_published_at_prothomalo_returns_none_for_non_numeric():
 
 
 def test_parse_published_at_jugantor_bengali_am():
-    result = parse_published_at("jugantor", "०२३ আগস্ট २०२६, ०५:२१ एएम", None)
+    result = parse_published_at("jugantor", "২৩ আগস্ট ২০২৬, ০৫:২১ এএম", None)
     parsed = datetime.fromisoformat(result)
     assert (parsed.year, parsed.month, parsed.day, parsed.hour, parsed.minute) == (
         2026,
@@ -48,13 +48,13 @@ def test_parse_published_at_jugantor_bengali_am():
 
 
 def test_parse_published_at_jugantor_bengali_pm():
-    result = parse_published_at("jugantor", "०२३ আগস্ট २०२६, ०५:२१ पिएम", None)
+    result = parse_published_at("jugantor", "২৩ আগস্ট ২০২৬, ০৫:২১ পিএম", None)
     parsed = datetime.fromisoformat(result)
     assert parsed.hour == 17
 
 
 def test_parse_published_at_jugantor_bengali_12am_is_midnight():
-    result = parse_published_at("jugantor", "०१ জানুয়ারি २०२६, १२:०० एएम", None)
+    result = parse_published_at("jugantor", "০১ জানুয়ারি ২০২৬, ১২:০০ এএম", None)
     parsed = datetime.fromisoformat(result)
     assert parsed.hour == 0
 
@@ -62,6 +62,10 @@ def test_parse_published_at_jugantor_bengali_12am_is_midnight():
 def test_parse_published_at_jugantor_returns_none_for_unrecognized_text():
     assert parse_published_at("jugantor", "unknown format", None) is None
     assert parse_published_at("jugantor", "", None) is None
+
+
+def test_parse_published_at_jugantor_returns_none_for_unrecognized_ampm():
+    assert parse_published_at("jugantor", "২৩ আগস্ট ২০২৬, ০৫:২১ অজানা", None) is None
 
 
 def test_parse_published_at_dailystar_hours_ago():

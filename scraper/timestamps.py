@@ -16,12 +16,12 @@ from . import bengali_date
 
 DHAKA_TZ = ZoneInfo("Asia/Dhaka")
 
-_BN_TO_ASCII_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+_BN_TO_ASCII_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")
 _BN_MONTH_TO_NUM = {name: num for num, name in bengali_date.MONTH_NAMES.items()}
 
 _BENGALI_ABSOLUTE_RE = re.compile(
-    r"(?P<day>[०-৯]{1,2})\s+(?P<month>\S+)\s+(?P<year>[०-৯]{4}),\s*"
-    r"(?P<hour>[०-৯]{1,2}):(?P<minute>[०-৯]{2})\s*(?P<ampm>\S+)"
+    r"(?P<day>[০-৯]{1,2})\s+(?P<month>\S+)\s+(?P<year>[০-৯]{4}),\s*"
+    r"(?P<hour>[০-৯]{1,2}):(?P<minute>[০-৯]{2})\s*(?P<ampm>\S+)"
 )
 
 _RELATIVE_ENGLISH_RE = re.compile(
@@ -63,7 +63,7 @@ def _parse_epoch_ms(raw):
 
 def _parse_bengali_absolute(raw):
     """jugantor: a full Bengali-language absolute datetime, e.g.
-    "२३ आगस्ट २०२६, ०५:२१ एएम" ("23 August 2026, 05:21 AM")."""
+    "২৩ আগস্ট ২০২৬, ০৫:২১ এএম" ("23 August 2026, 05:21 AM")."""
     if not raw or not isinstance(raw, str):
         return None
     match = _BENGALI_ABSOLUTE_RE.search(raw)
@@ -77,11 +77,14 @@ def _parse_bengali_absolute(raw):
     hour = int(match.group("hour").translate(_BN_TO_ASCII_DIGITS))
     minute = int(match.group("minute").translate(_BN_TO_ASCII_DIGITS))
     ampm = match.group("ampm")
-    if ampm.startswith("प"):  # पिएम = PM
+    if ampm.startswith("প"):  # পিএম = PM
         if hour != 12:
             hour += 12
-    elif hour == 12:  # एएम = AM
-        hour = 0
+    elif ampm.startswith("এ"):  # এএম = AM
+        if hour == 12:
+            hour = 0
+    else:
+        return None
     try:
         return datetime(year, month, day, hour, minute, tzinfo=DHAKA_TZ)
     except ValueError:
