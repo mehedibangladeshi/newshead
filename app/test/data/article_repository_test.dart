@@ -66,6 +66,18 @@ const _jsonWithMalformedEntry = '''
 }
 ''';
 
+const _jsonWithTimestamps = '''
+{
+  "generated_at": "2026-08-20",
+  "categories": [{"key": "main", "label": "Main"}],
+  "articles": [
+    {"id": "a1", "category": "main", "source": "Prothom Alo", "headline": "H1", "snippet": "S1", "imageUrl": "https://example.com/1.jpg", "articleUrl": "https://example.com/a1", "language": "bn", "publishedAt": "2026-08-23T10:00:00+06:00"},
+    {"id": "a2", "category": "main", "source": "The Daily Star", "headline": "H2", "snippet": "S2", "imageUrl": "https://example.com/2.jpg", "articleUrl": "https://example.com/a2", "language": "en", "publishedAt": "not-a-timestamp"},
+    {"id": "a3", "category": "main", "source": "The Daily Star", "headline": "H3", "snippet": "S3", "imageUrl": "https://example.com/3.jpg", "articleUrl": "https://example.com/a3"}
+  ]
+}
+''';
+
 void main() {
   test('parseArticles parses all fields correctly', () {
     final articles = parseArticles(_validJson);
@@ -228,5 +240,23 @@ void main() {
     );
 
     expect(result.categories, kDefaultCategories);
+  });
+
+  test('parseArticles parses language and publishedAt when present', () {
+    final articles = parseArticles(_jsonWithTimestamps);
+    expect(articles[0].language, 'bn');
+    expect(articles[0].publishedAt, DateTime.parse('2026-08-23T10:00:00+06:00'));
+  });
+
+  test('parseArticles leaves publishedAt null for an unparseable timestamp', () {
+    final articles = parseArticles(_jsonWithTimestamps);
+    expect(articles[1].language, 'en');
+    expect(articles[1].publishedAt, isNull);
+  });
+
+  test('parseArticles defaults language to en and publishedAt to null when both are absent', () {
+    final articles = parseArticles(_jsonWithTimestamps);
+    expect(articles[2].language, 'en');
+    expect(articles[2].publishedAt, isNull);
   });
 }
