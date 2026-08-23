@@ -51,9 +51,14 @@ def _slug_from_href(href):
     return path.strip("/").split("/")[0]
 
 
-def parse_sections(html):
+def parse_sections(html, include_all=False):
     """Pure parsing step for discover_sections; takes raw HTML, returns
-    a list of (slug, section_name) or [] if none were found."""
+    a list of (slug, section_name) or [] if none were found.
+
+    include_all is accepted for interface parity with the other source
+    modules' discovery bypass (used by scripts/discover_sections.py) but is
+    a no-op here — Jugantor has no curated allow/deny list to bypass; every
+    "/tp-" link found is already the full set."""
     soup = BeautifulSoup(html, "html.parser")
     container = soup.select_one("div.desktopSubCategoryDiv") or soup
 
@@ -75,14 +80,14 @@ def parse_sections(html):
     return sections
 
 
-def discover_sections():
+def discover_sections(include_all=False):
     try:
         html = _get(TODAYS_PAPER_URL)
     except requests.RequestException:
         logger.warning("Could not reach %s, using fallback section list", TODAYS_PAPER_URL)
         return list(FALLBACK_SECTIONS)
 
-    sections = parse_sections(html)
+    sections = parse_sections(html, include_all=include_all)
     if not sections:
         logger.warning("No sections discovered on %s, using fallback list", TODAYS_PAPER_URL)
         return list(FALLBACK_SECTIONS)
