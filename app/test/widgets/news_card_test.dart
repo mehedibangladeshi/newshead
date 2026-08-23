@@ -54,4 +54,54 @@ void main() {
 
     expect(find.byIcon(Icons.broken_image_outlined), findsOneWidget);
   });
+
+  testWidgets('never truncates a long headline', (tester) async {
+    final longHeadline = List.filled(300, 'A').join();
+    final longArticle = NewsArticle(
+      id: 'a2',
+      category: 'politics',
+      source: 'Jugantor',
+      headline: longHeadline,
+      snippet: 'snippet',
+      imageUrl: 'https://example.com/image.jpg',
+      articleUrl: 'https://example.com/article',
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NewsCard(article: longArticle, imageProviderBuilder: (_) => FailingImageProvider()),
+    ));
+    await tester.pump();
+
+    final headlineWidget = tester.widget<Text>(find.text(longHeadline));
+    expect(headlineWidget.maxLines, isNull);
+    expect(headlineWidget.overflow, isNot(TextOverflow.ellipsis));
+  });
+
+  testWidgets('shows the formatted publish timestamp when present', (tester) async {
+    final withTimestamp = NewsArticle(
+      id: 'a3',
+      category: 'politics',
+      source: 'Jugantor',
+      headline: 'Headline',
+      snippet: 'snippet',
+      imageUrl: 'https://example.com/image.jpg',
+      articleUrl: 'https://example.com/article',
+      language: 'en',
+      publishedAt: DateTime.now().subtract(const Duration(hours: 2)),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NewsCard(article: withTimestamp, imageProviderBuilder: (_) => FailingImageProvider()),
+    ));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.access_time), findsOneWidget);
+  });
+
+  testWidgets('hides the timestamp row when publishedAt is null', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: NewsCard(article: article, imageProviderBuilder: (_) => FailingImageProvider()),
+    ));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.access_time), findsNothing);
+  });
 }
