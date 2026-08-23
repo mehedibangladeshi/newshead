@@ -29,12 +29,18 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  // TickerProviderStateMixin (not SingleTickerProviderStateMixin): a
+  // refresh that changes the category count disposes and recreates the
+  // TabController (see _handleRefresh/_initControllers below), vending a
+  // second ticker over this State's lifetime. SingleTickerProviderStateMixin
+  // throws unconditionally on a second createTicker call, even after the
+  // first ticker was disposed — so it can't support that.
   // Large enough that a user could not plausibly swipe past either edge in a
   // session, so category switching loops seamlessly in both directions
-  // (Finance -> Main, Main -> Finance) without true unbounded paging.
-  // Rounded down to a multiple of the category count so it starts on Main.
+  // (Miscellaneous -> Main, Main -> Miscellaneous) without true unbounded
+  // paging. Rounded down to a multiple of the category count so it starts
+  // on Main.
   static const int _kLargePageBase = 100000;
 
   late TabController _tabController;
@@ -216,6 +222,14 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           Expanded(
             child: PageView.builder(
+              // Keyed on the controller's identity so a controller swap
+              // (see _handleRefresh, which creates a brand-new
+              // PageController when the category count changes) forces a
+              // full remount of this widget instead of just reattaching a
+              // new controller to the same underlying Scrollable state —
+              // otherwise the visible page can stay desynced from the
+              // freshly-reset TabController.
+              key: ObjectKey(_categoryPageController),
               controller: _categoryPageController,
               onPageChanged: _onCategoryPageChanged,
               itemBuilder: (context, page) {

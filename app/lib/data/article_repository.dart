@@ -81,7 +81,7 @@ Future<ArticlesFetchResult> fetchArticles({
   required ArticleCache cache,
 }) async {
   try {
-    final response = await client.get(sourceUrl);
+    final response = await client.get(sourceUrl).timeout(const Duration(seconds: 15));
     if (response.statusCode == 200) {
       final articles = parseArticles(response.body);
       final categories = parseCategories(response.body);
