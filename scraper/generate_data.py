@@ -1,8 +1,9 @@
 """Generate a real-data JSON snapshot for the NewsHead app.
 
-Scrapes 5 Bengali/English newspaper sources, classifies articles into 6
-fixed categories, and writes articles.json at the repo root. Published to
-GitHub Pages by .github/workflows/scrape.yml, which runs this 4x/day.
+Scrapes 5 Bengali/English newspaper sources, classifies articles into the
+app's fixed category taxonomy, and writes articles.json at the repo root.
+Published to GitHub Pages by .github/workflows/scrape.yml, which runs this
+4x/day.
 
 Run manually:
     python scripts/generate.py
@@ -26,17 +27,25 @@ DHAKA_TZ = ZoneInfo("Asia/Dhaka")
 OUTPUT_PATH = os.path.join(config.PROJECT_ROOT, "articles.json")
 
 # Single source of truth for the app's canonical category taxonomy: key,
-# display label, in display order ("main" always first). Edited as part of
-# Task 14 once the taxonomy from docs/section-discovery-report.md is
-# finalized — today's 5 keyword-classified categories are the placeholder
-# starting point, unchanged in meaning from before this pass.
+# display label, in display order ("main" always first).
 CATEGORY_DEFINITIONS = [
     ("main", "Main"),
     ("politics", "Politics"),
     ("world", "World"),
-    ("bangladesh", "Bangladesh"),
+    ("city", "City"),
+    ("country", "Country"),
+    ("business", "Business"),
     ("sports", "Sports"),
-    ("finance", "Finance"),
+    ("entertainment", "Entertainment"),
+    ("lifestyle", "Lifestyle"),
+    ("opinion", "Opinion"),
+    ("tech", "Tech"),
+    ("health", "Health"),
+    ("education", "Education"),
+    ("religion", "Religion"),
+    ("arts_literature", "Arts & Literature"),
+    ("expat", "Expat/Probash"),
+    ("miscellaneous", "Miscellaneous"),
 ]
 
 # Non-"main" category keys, in the order interleave_by_source() should
@@ -54,7 +63,10 @@ SOURCE_DISPLAY_NAMES = {
 
 # Bilingual (English + Bengali) keyword lists used to classify an article's
 # headline + section name into one of the app's fixed categories. Checked
-# in this order; first match wins. An article matching none of these is
+# in this order; first match wins. Covers all 15 non-"main", non-
+# "miscellaneous" categories; "miscellaneous" intentionally has no keyword
+# entry — it has no reliable keyword signal and is only reachable via an
+# explicit SECTION_CATEGORY_MAP entry. An article matching none of these is
 # dropped rather than forced into a category.
 CATEGORY_KEYWORDS = {
     "politics": [
@@ -66,16 +78,55 @@ CATEGORY_KEYWORDS = {
         "sport", "cricket", "football", "match", "tournament",
         "খেলা", "ক্রিকেট", "ফুটবল", "বিশ্বকাপ",
     ],
-    "finance": [
+    "business": [
         "business", "economy", "market", "stock", "trade", "finance",
         "বাণিজ্য", "অর্থনীতি", "শেয়ারবাজার", "ব্যবসা",
     ],
     "world": [
         "world", "international", "global", "আন্তর্জাতিক", "বিশ্বজুড়ে",
     ],
-    "bangladesh": [
-        "bangladesh", "dhaka", "national", "country", "capital",
-        "জাতীয়", "বাংলাদেশ", "রাজধানী", "সারাদেশ",
+    "city": [
+        "dhaka", "ঢাকা", "রাজধানী",
+    ],
+    "country": [
+        "bangladesh", "national", "nationwide", "country",
+        "জাতীয়", "বাংলাদেশ", "সারাদেশ",
+    ],
+    "entertainment": [
+        "entertainment", "movie", "film", "actor", "actress", "celebrity",
+        "বিনোদন", "চলচ্চিত্র", "নায়ক", "নায়িকা",
+    ],
+    "lifestyle": [
+        "lifestyle", "fashion", "recipe",
+        "জীবনযাপন", "লাইফস্টাইল", "ফ্যাশন",
+    ],
+    "opinion": [
+        "opinion", "editorial", "column", "op-ed",
+        "মতামত", "সম্পাদকীয়", "উপসম্পাদকীয়",
+    ],
+    "tech": [
+        "technology", "gadget", "software", "internet",
+        "প্রযুক্তি", "টেক", "ইন্টারনেট",
+    ],
+    "health": [
+        "health", "medical", "hospital", "doctor", "disease",
+        "স্বাস্থ্য", "চিকিৎসা", "রোগ",
+    ],
+    "education": [
+        "education", "school", "university", "student", "exam",
+        "শিক্ষা", "বিশ্ববিদ্যালয়", "শিক্ষার্থী", "পরীক্ষা",
+    ],
+    "religion": [
+        "religion", "islam", "hindu", "prayer",
+        "ধর্ম", "ইসলাম", "নামাজ",
+    ],
+    "arts_literature": [
+        "literature", "poetry", "novel",
+        "সাহিত্য", "কবিতা", "উপন্যাস",
+    ],
+    "expat": [
+        "expatriate", "probash", "remittance",
+        "প্রবাস", "প্রবাসী", "রেমিট্যান্স",
     ],
 }
 
@@ -95,14 +146,134 @@ def classify_category(headline, section_name):
 # Checked before classify_category()'s keyword guessing; a section listed
 # here always wins outright for every article it contains, regardless of
 # headline text. A source's absent-or-empty dict, or a section with no
-# entry, falls through to keyword matching instead. Filled in per Task 14
-# once the taxonomy from docs/section-discovery-report.md is finalized.
+# entry, falls through to keyword matching instead. Transcribed from the
+# user-dictated taxonomy interview against docs/section-discovery-report.md.
 SECTION_CATEGORY_MAP = {
-    "jugantor": {},
-    "prothomalo": {},
-    "dhakatribune": {},
-    "dailystar": {},
-    "ittefaq": {},
+    "jugantor": {
+        # sections[0] "tp-firstpage" is Main, excluded.
+        "tp-lastpage": "country",
+        "tp-city": "city",
+        "tp-sports": "sports",
+        "tp-anando-nagar": "entertainment",
+        "tp-news": "country",
+        "tp-second-edition": "country",
+        "tp-ten-horizon": "opinion",
+        "tp-bangla-face": "country",
+        "tp-editorial": "opinion",
+        "tp-ub-editorial": "opinion",
+        "tp-window": "lifestyle",
+        "tp-imp": "miscellaneous",
+        "tp-it-world": "tech",
+        "tp-everyday": "lifestyle",
+        "tp-letter": "miscellaneous",
+        "tp-obituary": "miscellaneous",
+    },
+    "prothomalo": {
+        # sections[0] "bangladesh" is Main, excluded. "chakri" and "video"
+        # are pre-filtered (jobs/classifieds, video hub) and stay unmapped.
+        "politics": "politics",
+        "world": "world",
+        "business": "business",
+        "opinion": "opinion",
+        "sports": "sports",
+        "entertainment": "entertainment",
+        "lifestyle": "lifestyle",
+    },
+    "dhakatribune": {
+        # sections[0] "latest-news" is Main, excluded. "others",
+        # "around-the-web", "photo-gallery", "magazine-archive", and
+        # "archive" are pre-filtered and stay unmapped.
+        "bangladesh": "country",
+        "bangladesh/dhaka": "city",
+        "bangladesh/education": "education",
+        "bangladesh/election": "politics",
+        "bangladesh/foreign-affairs": "world",
+        "bangladesh/nation": "country",
+        "bangladesh/politics": "politics",
+        "bangladesh/weather": "country",
+        "bangladesh/campus1": "education",
+        "bangladesh/accidents": "country",
+        "business": "business",
+        "business/economy": "business",
+        "business/banks": "business",
+        "business/commerce": "business",
+        "business/stock": "business",
+        "business/real-estate": "business",
+        "world": "world",
+        "world/asia": "world",
+        "world/south-asia": "world",
+        "world/africa": "world",
+        "world/middle-east": "world",
+        "world/europe": "world",
+        "world/north-america": "world",
+        "sport": "sports",
+        "sport/cricket": "sports",
+        "sport/football": "sports",
+        "sport/tennis": "sports",
+        "sport/athletics": "sports",
+        "sport/formula-one": "sports",
+        "sport/other-sports": "sports",
+        "opinion": "opinion",
+        "opinion/op-ed": "opinion",
+        "opinion/editorial": "opinion",
+        "opinion/longform": "opinion",
+        "showtime": "entertainment",
+        "feature": "lifestyle",
+        "magazine-1": "lifestyle",
+        "arts-and-letters": "arts_literature",
+        "arts-and-letters/poetry": "arts_literature",
+        "arts-and-letters/book-review": "arts_literature",
+        "arts-and-letters/fiction": "arts_literature",
+        "arts-and-letters/tribute": "arts_literature",
+        "arts-and-letters/non-fiction": "arts_literature",
+        "arts-and-letters/essay": "arts_literature",
+        "tribune-z": "miscellaneous",
+        "science-technology-environment": "tech",
+        "interviews-and-dialogue": "opinion",
+        "brief": "country",
+    },
+    "dailystar": {
+        # dailystar's discover_sections()[0] (Main) is whichever section
+        # happens to have the first article on a given day's /todays-news
+        # page, not a fixed section name like the other 4 sources - so ALL
+        # 6 discovered sections are mapped here, including "sports" (today's
+        # Main; on a day it isn't first, its articles flow through here).
+        "sports": "sports",
+        "slow-reads": "lifestyle",
+        "news": "country",
+        "business": "business",
+        "ds": "miscellaneous",
+        "health": "health",
+    },
+    "ittefaq": {
+        # sections[0] "home" is Main, excluded. "latest-news", utility
+        # pages, "archive", the unicode converter, "jobs", media hubs,
+        # transient topic tag pages, and numeric-ID article permalinks are
+        # pre-filtered and stay unmapped.
+        "editorial": "opinion",
+        "national": "country",
+        "capital": "city",
+        "country": "country",
+        "politics": "politics",
+        "world-news": "world",
+        "sports": "sports",
+        "entertainment": "entertainment",
+        "business": "business",
+        "tech": "tech",
+        "education": "education",
+        "health": "health",
+        "social-media": "tech",
+        "projonmo": "lifestyle",
+        "probash": "expat",
+        "campus": "education",
+        "literature": "arts_literature",
+        "religion": "religion",
+        "lifestyle": "lifestyle",
+        "law-and-court": "country",
+        "opinion": "opinion",
+        "news": "country",
+        "environment": "tech",
+    },
 }
 
 

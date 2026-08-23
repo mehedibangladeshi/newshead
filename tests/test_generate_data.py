@@ -10,9 +10,9 @@ from scraper.generate_data import (
 def test_classify_category_matches_english_keywords():
     assert classify_category("Government announces new cabinet", "News") == "politics"
     assert classify_category("Local team wins the football match", "Sports") == "sports"
-    assert classify_category("Stock market surges on trade deal", "Business") == "finance"
+    assert classify_category("Stock market surges on trade deal", "Business") == "business"
     assert classify_category("UN summit opens in Geneva", "World") == "world"
-    assert classify_category("Dhaka city council approves budget", "City") == "bangladesh"
+    assert classify_category("Dhaka city council approves budget", "City") == "city"
 
 
 def test_classify_category_matches_bengali_keywords():
@@ -21,7 +21,7 @@ def test_classify_category_matches_bengali_keywords():
 
 
 def test_classify_category_returns_none_when_no_keyword_matches():
-    assert classify_category("A completely unrelated headline about weather", "Opinion") is None
+    assert classify_category("A quiet Tuesday brought nothing newsworthy today", "Weekend Roundup") is None
 
 
 def test_classify_category_checks_section_name_too():
@@ -74,7 +74,10 @@ def test_classify_article_category_falls_back_to_keywords_when_unmapped():
 
 
 def test_classify_article_category_returns_none_when_neither_matches():
-    result = classify_article_category("testsource", "unmapped-section", "Opinion", "A completely unrelated headline")
+    result = classify_article_category(
+        "testsource", "unmapped-section", "Weekend Roundup",
+        "A quiet Tuesday brought nothing newsworthy today",
+    )
     assert result is None
 
 
@@ -116,3 +119,45 @@ def test_build_output_includes_the_given_articles():
     articles = [{"id": "a1", "category": "main"}]
     output = build_output("2026-08-23", articles)
     assert output["articles"] == articles
+
+
+def test_category_definitions_has_16_categories_plus_main():
+    assert len(CATEGORY_DEFINITIONS) == 17
+    assert CATEGORY_DEFINITIONS[0] == ("main", "Main")
+
+
+def test_classify_article_category_maps_new_sections_explicitly():
+    # Two real (source, section) pairs per source from the finalized
+    # SECTION_CATEGORY_MAP: one obvious, one less obvious.
+    assert classify_article_category("jugantor", "tp-sports", "খেলা", "Some headline") == "sports"
+    assert classify_article_category("jugantor", "tp-window", "Window", "Some headline") == "lifestyle"
+
+    assert classify_article_category("prothomalo", "sports", "Sports", "Some headline") == "sports"
+    assert classify_article_category("prothomalo", "lifestyle", "Lifestyle", "Some headline") == "lifestyle"
+
+    assert classify_article_category("dhakatribune", "sport/cricket", "Cricket", "Some headline") == "sports"
+    assert classify_article_category(
+        "dhakatribune", "arts-and-letters/poetry", "Poetry", "Some headline"
+    ) == "arts_literature"
+
+    assert classify_article_category("dailystar", "sports", "Sports", "Some headline") == "sports"
+    assert classify_article_category("dailystar", "ds", "DS", "Some headline") == "miscellaneous"
+
+    assert classify_article_category("ittefaq", "sports", "খেলা", "Some headline") == "sports"
+    assert classify_article_category("ittefaq", "probash", "প্রবাস", "Some headline") == "expat"
+
+
+def test_classify_category_matches_new_category_keywords():
+    # One assertion per new category added in Task 14, using headline text
+    # that actually contains one of that category's chosen keywords.
+    assert classify_category("Popular actor announces new film", "Entertainment") == "entertainment"
+    assert classify_category("New fashion week begins downtown", "Lifestyle") == "lifestyle"
+    assert classify_category("This editorial explains the issue", "Opinion") == "opinion"
+    assert classify_category("New technology unveiled at expo", "Tech") == "tech"
+    assert classify_category("New hospital opens downtown", "Health") == "health"
+    assert classify_category("Local university announces new dean", "Education") == "education"
+    assert classify_category("Community gathers for evening prayer service", "Religion") == "religion"
+    assert classify_category("New poetry collection published this month", "Arts") == "arts_literature"
+    assert classify_category("Remittance inflows rise this quarter", "Expat") == "expat"
+    assert classify_category("Dhaka traffic causes delays downtown", "City") == "city"
+    assert classify_category("Nationwide protests planned for next week", "Country") == "country"
