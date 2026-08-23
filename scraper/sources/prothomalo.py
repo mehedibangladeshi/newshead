@@ -214,7 +214,7 @@ def parse_articles(html, edition_date):
                 "url": story["url"],
                 "headline": _normalize(story.get("headline") or ""),
                 "summary": _normalize(story.get("subheadline") or ""),
-                "listing_time": "",
+                "listing_time": story.get("published-at"),
                 "thumbnail": thumbnail,
             }
         )
