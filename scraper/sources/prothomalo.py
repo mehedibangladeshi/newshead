@@ -76,9 +76,15 @@ def _get(url):
     return response.text
 
 
-def parse_sections(html):
+def parse_sections(html, include_all=False):
     """Pure parsing step for discover_sections; takes the homepage's raw
-    HTML, returns a list of (slug, section_name) or [] if none were found."""
+    HTML, returns a list of (slug, section_name) or [] if none were found.
+
+    include_all=True bypasses EXCLUDED_SECTION_SLUGS (video, chakri) — used
+    only by scripts/discover_sections.py to audit the real nav; production
+    discovery (include_all=False) is unchanged. The single-segment-path
+    filter stays regardless of include_all — it distinguishes real nav
+    categories from permalinks/search/oauth links, not curated content."""
     soup = BeautifulSoup(html, "html.parser")
     container = soup.select_one("#navbar") or soup
 
@@ -93,7 +99,9 @@ def parse_sections(html):
         # naturally excludes /collection/latest, /search, oauth links, etc.
         if not path or "/" in path:
             continue
-        if path in seen_slugs or path in EXCLUDED_SECTION_SLUGS:
+        if path in seen_slugs:
+            continue
+        if not include_all and path in EXCLUDED_SECTION_SLUGS:
             continue
         name = _normalize(link.get("aria-label") or link.get_text(strip=True))
         if not name:
@@ -104,14 +112,14 @@ def parse_sections(html):
     return sections
 
 
-def discover_sections():
+def discover_sections(include_all=False):
     try:
         html = _get(BASE_URL)
     except requests.RequestException:
         logger.warning("Could not reach %s, using fallback section list", BASE_URL)
         return list(FALLBACK_SECTIONS)
 
-    sections = parse_sections(html)
+    sections = parse_sections(html, include_all=include_all)
     if not sections:
         logger.warning("No sections discovered on %s, using fallback list", BASE_URL)
         return list(FALLBACK_SECTIONS)
