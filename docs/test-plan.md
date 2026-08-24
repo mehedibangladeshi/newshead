@@ -18,22 +18,30 @@ category taxonomy, scraper sources, or app data flow changes.
 - [ ] `gh run watch <run-id> --exit-status` until it finishes.
 - [ ] Read the job log (`gh run view --job=<job-id> --log`) and check each of
       the 8 sources logs `INFO: <source>: collected N article(s)`.
-  - **Known limitation, not a regression:** jugantor, dhakatribune, and
-    ittefaq return `403 Forbidden` for every section when scraped from
-    GitHub-hosted runner IPs (bot protection on those sites' end) — this
-    reproduces on every run, old and new. Expect 0 articles from those 3
-    sources in CI; only prothomalo, dailystar, and tbsnews reliably succeed
-    there. A local run from a residential IP collects from all 8.
-  - **2026-08-24 update, confirmed by a real CI run (`32699726704`):**
-    banglatribune and samakal — added this session, and clean when
-    curl-tested from a residential IP — also return `403 Forbidden` on
-    every section from GitHub-hosted runner IPs. So 5 of the 8 sources
-    (jugantor, dhakatribune, ittefaq, banglatribune, samakal) are
-    CI-blocked; only prothomalo, dailystar, and tbsnews publish in CI.
-    **Lesson:** a residential-IP curl test is not a reliable predictor of
-    CI-runner-IP behavior for Cloudflare-protected sites — treat any newly
-    "confirmed clean" source as unconfirmed for CI until an actual
+  - **2026-08-24, superseded by the self-hosted runner below:** jugantor,
+    dhakatribune, ittefaq, banglatribune, and samakal all returned `403
+    Forbidden` for every section when scraped from GitHub-hosted runner IPs
+    (Cloudflare bot protection on those sites' end, keyed on IP reputation —
+    confirmed by a real CI run, `32699726704` — not on UA/headers, since the
+    same requests succeed from a residential IP). Only prothomalo, dailystar,
+    and tbsnews reliably succeeded there. **Lesson that still applies:** a
+    residential-IP curl test is not a reliable predictor of CI-runner-IP
+    behavior for Cloudflare-protected sites — treat any newly "confirmed
+    clean" source as unconfirmed for CI until an actual
     `gh workflow run scrape.yml` proves it.
+  - **2026-08-24, the fix:** `.github/workflows/scrape.yml` now runs
+    Dockerized (`Dockerfile` at repo root) on a self-hosted GitHub Actions
+    runner (`runs-on: [self-hosted, Linux]`) registered on the maintainer's
+    always-on CachyOS machine — see `docs/runner-setup-cachyos.md` for setup.
+    Egressing from a residential IP should clear the block for all 5
+    previously-blocked sources; **this needs to be confirmed by an actual
+    `gh workflow run scrape.yml` once the runner is registered** — update
+    this note with the confirming run ID once verified. A new
+    `.github/workflows/scrape-fallback.yml` runs 2h after each scheduled
+    slot on a GitHub-hosted runner as a safety net if the self-hosted runner
+    is offline (it only re-confirms the 3 already-CI-clean sources in that
+    case, via a `gh run list` guard that skips itself if the primary already
+    succeeded within the last 3h).
   - **2026-08-24 source research:** curled ~20 more Bangladeshi newspaper
     sites with a spoofed desktop UA to check for Cloudflare blocking before
     adding sources. Confirmed Cloudflare-blocked from a residential IP
@@ -41,10 +49,9 @@ category taxonomy, scraper sources, or app data flow changes.
     ittefaq): bdnews24, kalerkantho, bd-pratidin, jagonews24, risingbd,
     daily-sun, banglanews24 — not attempted. Confirmed clean from a
     residential IP but not yet added: see `docs/ideas.md` "More scraper
-    sources" backlog — treat these the same way (residential-clean ≠
-    CI-clean, per the lesson above). Added this session: tbsnews (CI
-    works), banglatribune and samakal (CI-blocked despite residential
-    testing clean — see above).
+    sources" backlog — with a residential-egress runner in place, these no
+    longer need the CI-IP caveat before being wired in, only the usual
+    residential-IP confirmation.
   - Total article count should be sane (tens, not zero across every source,
     not thousands).
 
@@ -339,3 +346,8 @@ if any of the 3 turn out to be CI-blocked too.
 **Parked as future work**, not attempted this session: the 9 other
 confirmed-clean candidates and 7 newly-confirmed-blocked sites listed in
 `docs/ideas.md`.
+
+**2026-08-24, follow-up:** the CI-IP block above is superseded by the
+Dockerized self-hosted-runner fix in §2 — once confirmed working, the 3
+"not yet confirmed" sources and the parked candidates above no longer need
+a CI-IP-specific confirmation pass, only the usual residential-IP check.

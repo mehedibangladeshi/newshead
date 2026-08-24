@@ -54,3 +54,15 @@ added to the scraper directly (see `scraper/sources/`), so they're not
 listed in the two candidate buckets above. Of the three, only tbsnews
 actually publishes from CI — see `docs/test-plan.md` §9's CI-confirmation
 note for banglatribune/samakal.
+
+**2026-08-24, CI-IP blocking fixed:** the scraper now runs on a Dockerized
+self-hosted GitHub Actions runner with a residential IP (see
+`docs/runner-setup-cachyos.md`, `docs/test-plan.md` §2) instead of
+GitHub-hosted runners. Once that's confirmed working, the CI-IP caveat
+above no longer applies — wiring in the "confirmed clean" candidates, or
+re-testing the "confirmed blocked" set, only needs the normal
+residential-IP check, not a separate CI-runner-IP confirmation pass. A
+proxy/unblocker-API strategy was researched and rejected for cost reasons
+(the pipeline's uncapped, non-incremental re-scraping would run
+~$100+/month even after caching improvements) in favor of the residential
+runner.

@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     # The uncapped taxonomy (100 mapped sections across 5 sources) takes
     # ~13 minutes for the scrape step alone on a local run; 20 minutes left
     # too little headroom for checkout/publish overhead and CI network
@@ -22,11 +22,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.x'
-      - run: pip install -r scraper/requirements.txt
-      - run: python scripts/generate.py
+      - run: docker build -t newshead-scraper .
+      - run: docker run --rm -v "$PWD:/app" newshead-scraper
       - run: |
           mkdir -p publish
           cp articles.json publish/articles.json

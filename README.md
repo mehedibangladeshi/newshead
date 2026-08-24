@@ -1,9 +1,7 @@
 # NewsHead
 
 A self-scraping news app: a Python pipeline scrapes 8 Bengali/English
-newspapers 4x/day (only 3 currently publish reliably from CI — see
-`docs/test-plan.md` §2 for which 5 are Cloudflare-blocked from GitHub's
-runner IPs), classifies articles into a 17-category taxonomy (16 topics plus a
+newspapers 4x/day, classifies articles into a 17-category taxonomy (16 topics plus a
 per-source Main), tags each with a publish timestamp and language, and
 publishes the result to GitHub Pages. The Flutter app fetches that JSON at
 launch and presents it as a reels-style (TikTok/Instagram-like) vertical,
@@ -24,6 +22,16 @@ python3 -m venv .venv
 `.github/workflows/scrape.yml` runs this automatically 4x/day (7 AM / 11 AM / 4 PM /
 8 PM Asia/Dhaka) and publishes `articles.json` to the `gh-pages` branch, served at
 `https://mehedibangladeshi.github.io/newshead/articles.json`.
+
+5 of the 8 sources (jugantor, dhakatribune, ittefaq, banglatribune, samakal)
+are Cloudflare-blocked from GitHub-hosted runner IPs (bot protection keyed on
+IP reputation — see `docs/test-plan.md` §2). To fix this without a recurring
+proxy-service cost, the scrape job runs Dockerized (`Dockerfile` at the repo
+root) on a self-hosted GitHub Actions runner on a residential IP — see
+`docs/runner-setup-cachyos.md` for how it's set up. `scrape-fallback.yml`
+covers the case where that runner is offline, re-running on a GitHub-hosted
+runner 2 hours later (only the 3 already-CI-clean sources succeed there, but
+it keeps the feed from going fully stale).
 
 Use `scripts/discover_sections.py` to audit each source's full raw navigation
 (bypassing the per-source discovery allowlists) when auditing or redesigning
