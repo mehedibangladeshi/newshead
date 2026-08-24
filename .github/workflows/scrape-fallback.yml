@@ -3,7 +3,7 @@ name: Scrape and publish articles (hosted-runner fallback)
 
 on:
   schedule:
-    - cron: '0 3,7,12,16 * * *'   # 2h after the primary self-hosted schedule
+    - cron: '0 0,3,7,9,12,15,18 * * *'   # 2h after the primary self-hosted schedule
   workflow_dispatch:
 
 concurrency:

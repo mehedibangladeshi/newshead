@@ -3,7 +3,7 @@ name: Scrape and publish articles
 
 on:
   schedule:
-    - cron: '0 1,5,10,14 * * *'   # 07:00 / 11:00 / 16:00 / 20:00 Asia/Dhaka (UTC+6)
+    - cron: '0 1,5,7,10,13,16,22 * * *'   # 07:00 / 11:00 / 13:00 / 16:00 / 19:00 / 22:00 / 04:00(+1d) Asia/Dhaka (UTC+6)
   workflow_dispatch:
 
 concurrency:
