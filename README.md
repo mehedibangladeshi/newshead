@@ -1,6 +1,6 @@
 # NewsHead
 
-A self-scraping news app: a Python pipeline scrapes 8 Bengali/English
+A self-scraping news app: a Python pipeline scrapes 11 Bengali/English
 newspapers 4x/day, classifies articles into a 17-category taxonomy (16 topics plus a
 per-source Main), tags each with a publish timestamp and language, and
 publishes the result to GitHub Pages. The Flutter app fetches that JSON at
@@ -23,7 +23,7 @@ python3 -m venv .venv
 8 PM Asia/Dhaka) and publishes `articles.json` to the `gh-pages` branch, served at
 `https://mehedibangladeshi.github.io/newshead/articles.json`.
 
-5 of the 8 sources (jugantor, dhakatribune, ittefaq, banglatribune, samakal)
+5 of the 11 sources (jugantor, dhakatribune, ittefaq, banglatribune, samakal)
 are Cloudflare-blocked from GitHub-hosted runner IPs (bot protection keyed on
 IP reputation — see `docs/test-plan.md` §2). To fix this without a recurring
 proxy-service cost, the scrape job runs Dockerized (`Dockerfile` at the repo

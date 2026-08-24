@@ -1,6 +1,6 @@
 """Generate a real-data JSON snapshot for the NewsHead app.
 
-Scrapes 8 Bengali/English newspaper sources, classifies articles into the
+Scrapes 11 Bengali/English newspaper sources, classifies articles into the
 app's fixed category taxonomy, and writes articles.json at the repo root.
 Published to GitHub Pages by .github/workflows/scrape.yml, which runs this
 4x/day.
@@ -62,6 +62,9 @@ SOURCE_DISPLAY_NAMES = {
     "tbsnews": "The Business Standard",
     "banglatribune": "Bangla Tribune",
     "samakal": "Samakal",
+    "bdnews24": "bdnews24.com",
+    "bdnews24bangla": "বিডিনিউজ টোয়েন্টিফোর বাংলা",
+    "dhakapost": "The Dhaka Post",
 }
 
 # Per-source display language for formatting an article's publishedAt on
@@ -76,6 +79,9 @@ SOURCE_LANGUAGE = {
     "tbsnews": "en",
     "banglatribune": "bn",
     "samakal": "bn",
+    "bdnews24": "en",
+    "bdnews24bangla": "bn",
+    "dhakapost": "en",
 }
 
 # Bilingual (English + Bengali) keyword lists used to classify an article's
@@ -357,6 +363,81 @@ SECTION_CATEGORY_MAP = {
         "opinion": "opinion",
         "capital": "city",
         "lifestyle": "lifestyle",
+    },
+    "bdnews24": {
+        # bdnews24's discover_sections()[0] (Main) is whichever section
+        # happens to have the newest card on its shared /archive feed on a
+        # given run, not a fixed section - same "Main is dynamic, map every
+        # discovered slug" approach as dailystar/tbsnews above.
+        "bangladesh": "country",
+        "politics": "politics",
+        "campus": "education",
+        "education": "education",
+        "environment": "tech",
+        "health": "health",
+        "fashion": "lifestyle",
+        "people": "lifestyle",
+        "automobile": "miscellaneous",
+        "aviation": "miscellaneous",
+        "world": "world",
+        "science": "tech",
+        "sport": "sports",
+        "cricket": "sports",
+        "neighbours": "world",
+        "business": "business",
+        "economy": "business",
+        "opinion": "opinion",
+        "technology": "tech",
+        "lifestyle": "lifestyle",
+        "entertainment": "entertainment",
+    },
+    "bdnews24bangla": {
+        # sections[0] "samagrabangladesh" is Main, excluded (a fixed
+        # nav-derived slug, not dynamic like bdnews24/tbsnews above - see
+        # scraper/sources/bdnews24bangla.py's EXCLUDED_SECTION_SLUGS for
+        # what's pre-filtered).
+        "ctg": "city",
+        "world": "world",
+        "politics": "politics",
+        "arts": "arts_literature",
+        "glitz": "entertainment",
+        "lifestyle": "lifestyle",
+        "tech": "tech",
+        "kidz": "lifestyle",
+        "probash": "expat",
+        "bangladesh": "country",
+        "science": "tech",
+        "environment": "tech",
+        "health": "health",
+        "campus": "education",
+        "special": "miscellaneous",
+        "nareespandan": "lifestyle",
+        "cricket": "sports",
+        "sport": "sports",
+        "opinion": "opinion",
+        "finance-and-trade": "business",
+        "business": "business",
+        "economy": "business",
+        "stocks": "business",
+        "corporate": "business",
+        "neighbour": "world",
+    },
+    "dhakapost": {
+        # sections[0] "national" is Main, excluded (a fixed nav-derived
+        # slug - see scraper/sources/dhakapost.py's EXCLUDED_SECTION_SLUGS,
+        # currently empty since every discovered section is real prose).
+        "politics": "politics",
+        "foreign-news": "world",
+        "world": "world",
+        "business": "business",
+        "sports": "sports",
+        "health": "health",
+        "education": "education",
+        "tech": "tech",
+        "entertainment": "entertainment",
+        "lifesyle": "lifestyle",  # site's own slug typo, not "lifestyle"
+        "weird": "miscellaneous",
+        "interview": "opinion",
     },
 }
 

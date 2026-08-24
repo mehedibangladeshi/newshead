@@ -25,6 +25,9 @@ SOURCES = [
     "tbsnews",
     "banglatribune",
     "samakal",
+    "bdnews24",
+    "bdnews24bangla",
+    "dhakapost",
 ]
 
 

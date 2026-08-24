@@ -63,6 +63,33 @@ _BENGALI_ABSOLUTE_24H_RE = re.compile(
     r"(?P<hour>[০-৯]{1,2}):(?P<minute>[০-৯]{2})"
 )
 
+# bdnews24.com's /archive listing cards prefix an English absolute datetime
+# with a static "Published : " label, e.g.
+# "Published : 24 Aug 2026, 11:55 PM" - a fixed 12-hour clock, no UTC offset
+# (implicitly Bangladesh local time, like every other source here).
+_BDNEWS24_PUBLISHED_RE = re.compile(
+    r"(?P<day>\d{1,2})\s+(?P<month>[A-Za-z]{3,})\s+(?P<year>\d{4}),\s*"
+    r"(?P<hour>\d{1,2}):(?P<minute>\d{2})\s*(?P<ampm>[AaPp][Mm])"
+)
+
+_MONTH_ABBREV_TO_NUM = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+# thedhakapost.com's listing/article-page datetimes are an English absolute
+# "<day> <full month>, <year> <hour>:<minute> <am/pm>", e.g.
+# "16 November, 2024 10:44 am" - but confirmed live to sometimes pair an
+# already-24-hour hour with a spurious am/pm suffix, e.g.
+# "3 November, 2024 15:00 pm". The regex below captures the hour as written
+# and _parse_dhakapost_absolute() only applies the am/pm adjustment when the
+# hour is still in 12-hour range, so a genuine 24-hour value like 15 is left
+# alone regardless of the trailing am/pm text.
+_DHAKAPOST_ABSOLUTE_RE = re.compile(
+    r"(?P<day>\d{1,2})\s+(?P<month>[A-Za-z]+),\s*(?P<year>\d{4})\s+"
+    r"(?P<hour>\d{1,2}):(?P<minute>\d{2})\s*(?P<ampm>[AaPp][Mm])"
+)
+
 
 def _parse_iso_offset(raw):
     """dhakatribune / ittefaq: an ISO-8601 string with a UTC offset already
@@ -174,6 +201,62 @@ def _parse_bengali_absolute_24h(raw):
         return None
 
 
+def _parse_bdnews24_published(raw):
+    """bdnews24.com: "Published : 24 Aug 2026, 11:55 PM" - English absolute
+    datetime, 12-hour clock, static "Published : " prefix."""
+    if not raw or not isinstance(raw, str):
+        return None
+    match = _BDNEWS24_PUBLISHED_RE.search(raw)
+    if not match:
+        return None
+    month = _MONTH_ABBREV_TO_NUM.get(match.group("month")[:3].lower())
+    if month is None:
+        return None
+    day = int(match.group("day"))
+    year = int(match.group("year"))
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute"))
+    ampm = match.group("ampm").lower()
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    elif ampm == "am" and hour == 12:
+        hour = 0
+    try:
+        return datetime(year, month, day, hour, minute, tzinfo=DHAKA_TZ)
+    except ValueError:
+        return None
+
+
+def _parse_dhakapost_absolute(raw):
+    """thedhakapost.com: "16 November, 2024 10:44 am" - but confirmed live
+    to sometimes carry an already-24-hour hour with a spurious am/pm suffix
+    (e.g. "3 November, 2024 15:00 pm"), so the am/pm adjustment is only
+    applied when the hour is still ambiguous (1-12)."""
+    if not raw or not isinstance(raw, str):
+        return None
+    match = _DHAKAPOST_ABSOLUTE_RE.search(raw)
+    if not match:
+        return None
+    try:
+        month = datetime.strptime(match.group("month")[:3], "%b").month
+    except ValueError:
+        return None
+    day = int(match.group("day"))
+    year = int(match.group("year"))
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute"))
+    ampm = match.group("ampm").lower()
+    if 1 <= hour <= 12:
+        if ampm == "pm" and hour != 12:
+            hour += 12
+        elif ampm == "am" and hour == 12:
+            hour = 0
+    try:
+        return datetime(year, month, day, hour, minute, tzinfo=DHAKA_TZ)
+    except ValueError:
+        return None
+
+
 _SOURCE_PARSERS = {
     "dhakatribune": lambda raw, anchor: _parse_iso_offset(raw),
     "ittefaq": lambda raw, anchor: _parse_iso_offset(raw),
@@ -183,6 +266,11 @@ _SOURCE_PARSERS = {
     "banglatribune": lambda raw, anchor: _parse_iso_offset(raw),
     "tbsnews": lambda raw, anchor: _parse_relative_abbrev(raw, anchor),
     "samakal": lambda raw, anchor: _parse_bengali_absolute_24h(raw),
+    "bdnews24": lambda raw, anchor: _parse_bdnews24_published(raw),
+    "dhakapost": lambda raw, anchor: _parse_dhakapost_absolute(raw),
+    # bdnews24bangla's listing cards carry no time signal at all (confirmed
+    # live: always an empty string) - left unregistered, which already
+    # returns None safely via the .get() below.
 }
 
 

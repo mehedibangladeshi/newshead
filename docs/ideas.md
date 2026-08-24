@@ -12,6 +12,14 @@ manual toggle button in the WebView screen's app bar that lets the user
 switch the filter off/on per page, instead of (or in addition to) applying
 it automatically everywhere.
 
+## Filter feed by source (mobile app)
+
+Let the user filter the article feed by news source (e.g. show only Prothom
+Alo + Daily Star), in addition to the existing category filter. Parked as an
+idea, not designed in detail — needs a decision on UI placement (a source
+picker alongside the category tabs? a multi-select sheet?) and whether the
+choice persists across app restarts.
+
 ## More scraper sources — researched candidate list (2026-08-24)
 
 Tested ~20 Bangladeshi newspaper sites by curling each with a spoofed desktop
@@ -22,13 +30,21 @@ blocking already documented in `docs/test-plan.md` §2 for jugantor,
 dhakatribune, and ittefaq — real confirmation for any of these still needs a
 live scrape from GitHub Actions, not just a local curl.
 
+**Being added next (2026-08-24 session):** bdnews24 (bdnews24.com, EN),
+bdnews24 Bangla (bangla.bdnews24.com, BN), and Dhaka Post
+(thedhakapost.com, EN) — bdnews24/bdnews24 Bangla were previously listed in
+the Cloudflare-blocked bucket below, but that finding predates the
+residential self-hosted-runner fix and is being re-checked as part of this
+addition; Dhaka Post was in the confirmed-clean bucket. See
+`docs/test-plan.md` for the outcome.
+
 **Confirmed not Cloudflare-blocked from a residential IP, not yet wired
 into the scraper** — candidates for a future source-addition pass, roughly
 in order of prominence: New Age (newagebd.net, EN), Financial Express
-(thefinancialexpress.com.bd, EN), Dhaka Post (thedhakapost.com, EN),
-Bangladesh Observer (observerbd.com, EN), BSS (bssnews.net, EN), Ajker
-Patrika (ajkerpatrika.com, BN), Daily Inqilab (dailyinqilab.com, BN), Bhorer
-Kagoj (bhorerkagoj.com, BN), Manab Zamin (mzamin.com, BN).
+(thefinancialexpress.com.bd, EN), Bangladesh Observer (observerbd.com, EN),
+BSS (bssnews.net, EN), Ajker Patrika (ajkerpatrika.com, BN), Daily Inqilab
+(dailyinqilab.com, BN), Bhorer Kagoj (bhorerkagoj.com, BN), Manab Zamin
+(mzamin.com, BN).
 
 **Important caveat added 2026-08-24, after a real CI run:** "confirmed
 clean" above only means clean from a residential IP — it is *not* a
@@ -41,12 +57,14 @@ local curl test.
 
 **Confirmed Cloudflare-blocked (403 / bot-challenge on every request, from
 both a residential IP and CI)** — don't attempt without a proxy/residential-
-IP strategy: bdnews24 (bdnews24.com, EN), Kaler Kantho (kalerkantho.com,
-BN), Bangladesh Pratidin (bd-pratidin.com, BN), Jagonews24
-(jagonews24.com, BN), RisingBD (risingbd.com, BN), Daily Sun
-(daily-sun.com, EN), Banglanews24 (banglanews24.com, BN). Same category as
-the already-known-blocked jugantor, dhakatribune, ittefaq, and (per the
-2026-08-24 CI run) banglatribune and samakal.
+IP strategy (bdnews24 and bdnews24 Bangla removed from this list — see
+"being added next" above, re-testing now that the residential runner is in
+place): Kaler Kantho (kalerkantho.com, BN), Bangladesh Pratidin
+(bd-pratidin.com, BN), Jagonews24 (jagonews24.com, BN), RisingBD
+(risingbd.com, BN), Daily Sun (daily-sun.com, EN), Banglanews24
+(banglanews24.com, BN). Same category as the already-known-blocked
+jugantor, dhakatribune, ittefaq, and (per the 2026-08-24 CI run)
+banglatribune and samakal.
 
 The Business Standard (tbsnews.net), Bangla Tribune (banglatribune.com),
 and Samakal (samakal.com) were picked from this same research pass and

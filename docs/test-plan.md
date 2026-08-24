@@ -17,7 +17,7 @@ category taxonomy, scraper sources, or app data flow changes.
 - [ ] Trigger `.github/workflows/scrape.yml`: `gh workflow run scrape.yml`.
 - [ ] `gh run watch <run-id> --exit-status` until it finishes.
 - [ ] Read the job log (`gh run view --job=<job-id> --log`) and check each of
-      the 8 sources logs `INFO: <source>: collected N article(s)`.
+      the 11 sources logs `INFO: <source>: collected N article(s)`.
   - **2026-08-24, superseded by the self-hosted runner below:** jugantor,
     dhakatribune, ittefaq, banglatribune, and samakal all returned `403
     Forbidden` for every section when scraped from GitHub-hosted runner IPs
@@ -351,3 +351,48 @@ confirmed-clean candidates and 7 newly-confirmed-blocked sites listed in
 Dockerized self-hosted-runner fix in §2 — once confirmed working, the 3
 "not yet confirmed" sources and the parked candidates above no longer need
 a CI-IP-specific confirmation pass, only the usual residential-IP check.
+
+## 10. Three more scraper sources: bdnews24, bdnews24 Bangla, Dhaka Post (2026-08-25)
+
+Added the 3 sources called out next in `docs/ideas.md`'s candidate list:
+`scraper/sources/bdnews24.py` (English, bdnews24.com), `scraper/sources/
+bdnews24bangla.py` (Bangla, bangla.bdnews24.com — a separate site/CMS from
+the English edition, researched independently), and `scraper/sources/
+dhakapost.py` (English, thedhakapost.com) — one module per source, built in
+parallel by independent subagents that fetched real live pages before
+writing selectors, same approach as §9. bdnews24/bdnews24 Bangla had
+previously been recorded as Cloudflare-blocked (§2/`docs/ideas.md`), but
+that finding predated the residential self-hosted-runner fix; re-testing
+this session found both clean (HTTP 200, `server: cloudflare` present but
+no challenge). Dhaka Post was already in the confirmed-clean bucket.
+
+Wired into `scraper/config.py::SOURCES`, `scraper/generate_data.py`
+(`SOURCE_DISPLAY_NAMES`, `SOURCE_LANGUAGE`, `SECTION_CATEGORY_MAP` — every
+discovered section mapped explicitly for all 3, since bdnews24's `/archive`
+feed derives Main dynamically like tbsnews, and bdnews24bangla/dhakapost's
+first nav section was treated as the fixed Main), and `scraper/
+timestamps.py` (2 new parser cases: bdnews24's "Published : 24 Aug 2026,
+11:55 PM" 12-hour absolute format, and dhakapost's "16 November, 2024 10:44
+am" absolute format — which live testing showed can also appear as an
+already-24-hour hour with a spurious am/pm suffix, e.g. "3 November, 2024
+15:00 pm", so the parser only applies the am/pm adjustment when the hour is
+still in the ambiguous 1-12 range). bdnews24bangla's listing cards carry no
+time signal at all (confirmed empty string across every section) — left
+unregistered in `timestamps.py`, which already returns `None` safely for an
+unregistered source.
+
+Verified with a scoped local run of only the 3 new sources (not the
+existing 8, which are unchanged and already covered by §9) appended onto
+the last published `articles.json` (fetched from `gh-pages`, 2135
+articles): `bdnews24` 18 articles (18/18 `publishedAt` filled), `dhakapost`
+147 articles (147/147 filled), `bdnews24bangla` 314 articles (0/314 filled,
+expected per the no-time-signal finding above) — 2614 total after append,
+0 duplicate ids, 0 missing required fields, no unknown categories, both
+`bn`/`en` languages present. 12 new pytest cases added (`tests/
+test_bdnews24_sections.py`, `tests/test_bdnews24bangla_sections.py`,
+`tests/test_dhakapost_sections.py`), all passing alongside the existing
+suite.
+
+**Not yet confirmed:** whether these 3 also succeed from the CI self-hosted
+runner, not just this session's sandbox network — confirm on the next
+`gh workflow run scrape.yml`.
