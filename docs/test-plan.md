@@ -22,17 +22,29 @@ category taxonomy, scraper sources, or app data flow changes.
     ittefaq return `403 Forbidden` for every section when scraped from
     GitHub-hosted runner IPs (bot protection on those sites' end) — this
     reproduces on every run, old and new. Expect 0 articles from those 3
-    sources in CI; only prothomalo, dailystar, tbsnews, banglatribune, and
-    samakal reliably succeed there. A local run from a residential IP
-    collects from all 8.
+    sources in CI; only prothomalo, dailystar, and tbsnews reliably succeed
+    there. A local run from a residential IP collects from all 8.
+  - **2026-08-24 update, confirmed by a real CI run (`32699726704`):**
+    banglatribune and samakal — added this session, and clean when
+    curl-tested from a residential IP — also return `403 Forbidden` on
+    every section from GitHub-hosted runner IPs. So 5 of the 8 sources
+    (jugantor, dhakatribune, ittefaq, banglatribune, samakal) are
+    CI-blocked; only prothomalo, dailystar, and tbsnews publish in CI.
+    **Lesson:** a residential-IP curl test is not a reliable predictor of
+    CI-runner-IP behavior for Cloudflare-protected sites — treat any newly
+    "confirmed clean" source as unconfirmed for CI until an actual
+    `gh workflow run scrape.yml` proves it.
   - **2026-08-24 source research:** curled ~20 more Bangladeshi newspaper
     sites with a spoofed desktop UA to check for Cloudflare blocking before
-    adding sources. Confirmed Cloudflare-blocked (403 / bot-challenge, same
-    failure mode as jugantor/dhakatribune/ittefaq): bdnews24, kalerkantho,
-    bd-pratidin, jagonews24, risingbd, daily-sun, banglanews24 — not
-    attempted. Confirmed clean but not yet added: see `docs/ideas.md`
-    "More scraper sources" backlog. Confirmed clean and added this session:
-    tbsnews, banglatribune, samakal.
+    adding sources. Confirmed Cloudflare-blocked from a residential IP
+    (403 / bot-challenge, same failure mode as jugantor/dhakatribune/
+    ittefaq): bdnews24, kalerkantho, bd-pratidin, jagonews24, risingbd,
+    daily-sun, banglanews24 — not attempted. Confirmed clean from a
+    residential IP but not yet added: see `docs/ideas.md` "More scraper
+    sources" backlog — treat these the same way (residential-clean ≠
+    CI-clean, per the lesson above). Added this session: tbsnews (CI
+    works), banglatribune and samakal (CI-blocked despite residential
+    testing clean — see above).
   - Total article count should be sane (tens, not zero across every source,
     not thousands).
 
@@ -304,6 +316,19 @@ articles, `banglatribune` 251 (211/251 `publishedAt` filled), `samakal` 150
 (150/150). Data contract re-validated against the live output — 17
 categories, no unknown categories, no missing required fields, no
 duplicate ids, every `language` is `bn`/`en` and matches its source.
+
+**CI-runner-IP confirmation (2026-08-24, run `32699726704`, triggered
+manually after merging):** unlike the local/residential-IP run above,
+`banglatribune` and `samakal` both returned `403 Forbidden` on every
+section from GitHub's runner IP — the same Cloudflare bot-protection
+jugantor/dhakatribune/ittefaq already hit, just not detectable from the
+residential IP this session's research was done from. Only `tbsnews`
+joined `prothomalo`/`dailystar` as CI-successful (186 articles). The run
+still succeeded end-to-end and published 339 total articles (60 + 93 +
+186) to `gh-pages` — a source returning 0 articles is a warning, not a
+failure, by design. See §2's updated lesson: confirm any newly-added
+source against a real CI run, not just a residential-IP curl test, before
+calling it "added" in the confident sense.
 
 **Not yet confirmed:** whether these 3 also hit the CI-runner-IP 403
 pattern from §2 — that curl-based research was done from a residential IP,

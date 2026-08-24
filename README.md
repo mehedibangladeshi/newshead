@@ -1,7 +1,9 @@
 # NewsHead
 
-A self-scraping news app: a Python pipeline scrapes 8 Bengali/English newspapers
-4x/day, classifies articles into a 17-category taxonomy (16 topics plus a
+A self-scraping news app: a Python pipeline scrapes 8 Bengali/English
+newspapers 4x/day (only 3 currently publish reliably from CI — see
+`docs/test-plan.md` §2 for which 5 are Cloudflare-blocked from GitHub's
+runner IPs), classifies articles into a 17-category taxonomy (16 topics plus a
 per-source Main), tags each with a publish timestamp and language, and
 publishes the result to GitHub Pages. The Flutter app fetches that JSON at
 launch and presents it as a reels-style (TikTok/Instagram-like) vertical,
