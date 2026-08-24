@@ -1,6 +1,6 @@
 # NewsHead
 
-A self-scraping news app: a Python pipeline scrapes 5 Bengali/English newspapers
+A self-scraping news app: a Python pipeline scrapes 8 Bengali/English newspapers
 4x/day, classifies articles into a 17-category taxonomy (16 topics plus a
 per-source Main), tags each with a publish timestamp and language, and
 publishes the result to GitHub Pages. The Flutter app fetches that JSON at
@@ -37,14 +37,16 @@ the category taxonomy later.
 - `articles` — one object per article:
   - `id`, `category`, `source`, `headline`, `snippet`, `imageUrl`, `articleUrl`
     — always present.
-  - `language` — `"bn"` or `"en"`, set per-source (jugantor/prothomalo/ittefaq
-    are Bengali; dhakatribune/dailystar are English).
+  - `language` — `"bn"` or `"en"`, set per-source
+    (jugantor/prothomalo/ittefaq/banglatribune/samakal are Bengali;
+    dhakatribune/dailystar/tbsnews are English).
   - `publishedAt` — an ISO-8601 datetime with a UTC offset, or `null` when the
-    source's own listing gave no parseable signal. dailystar's is
-    approximate (parsed from a relative phrase like "5 HOUR(s)", anchored to
-    the scrape run's own start time) since getting an exact one would need an
-    extra per-article fetch; Dhaka Tribune's listing only carries a timestamp
-    on some cards, so a null rate there reflects the source, not a bug.
+    source's own listing gave no parseable signal. dailystar's and tbsnews's
+    are both approximate (parsed from a relative phrase like "5 HOUR(s)" or
+    an abbreviated "1h", anchored to the scrape run's own start time) since
+    getting an exact one would need an extra per-article fetch; Dhaka
+    Tribune's and Bangla Tribune's listings only carry a timestamp on some
+    cards (same CMS), so a null rate there reflects the source, not a bug.
 
 ## App
 

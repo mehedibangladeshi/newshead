@@ -16,7 +16,16 @@ REQUEST_DELAY_SECONDS = 0.7
 #   list_articles(slug, edition_date) -> list[dict]
 #   fetch_article(url) -> dict
 #   get_cover_logo_url() -> str
-SOURCES = ["jugantor", "prothomalo", "dhakatribune", "dailystar", "ittefaq"]
+SOURCES = [
+    "jugantor",
+    "prothomalo",
+    "dhakatribune",
+    "dailystar",
+    "ittefaq",
+    "tbsnews",
+    "banglatribune",
+    "samakal",
+]
 
 
 def make_session():

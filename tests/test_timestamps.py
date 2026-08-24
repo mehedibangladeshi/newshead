@@ -109,3 +109,50 @@ def test_parse_published_at_dailystar_abbreviated_minutes():
 def test_parse_published_at_dailystar_abbreviated_hours():
     anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
     assert parse_published_at("dailystar", "5 HOUR(s)", anchor) == "2026-08-23T09:00:00+06:00"
+
+
+def test_parse_published_at_banglatribune_iso_offset():
+    result = parse_published_at("banglatribune", "2026-08-23T12:58:59+06:00", None)
+    assert result == "2026-08-23T12:58:59+06:00"
+
+
+def test_parse_published_at_tbsnews_abbreviated_minutes():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("tbsnews", "6m", anchor) == "2026-08-23T13:54:00+06:00"
+
+
+def test_parse_published_at_tbsnews_abbreviated_hours():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("tbsnews", "1h", anchor) == "2026-08-23T13:00:00+06:00"
+
+
+def test_parse_published_at_tbsnews_abbreviated_days():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("tbsnews", "1d", anchor) == "2026-08-22T14:00:00+06:00"
+
+
+def test_parse_published_at_tbsnews_returns_none_without_an_anchor():
+    assert parse_published_at("tbsnews", "6m", None) is None
+
+
+def test_parse_published_at_tbsnews_returns_none_for_unrecognized_text():
+    anchor = datetime(2026, 8, 23, 14, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("tbsnews", "6 min ago", anchor) is None
+    assert parse_published_at("tbsnews", "6M", anchor) is None
+
+
+def test_parse_published_at_samakal_bengali_24h():
+    result = parse_published_at("samakal", "২৩ আগস্ট ২০২৬ | ২২:৫০", None)
+    parsed = datetime.fromisoformat(result)
+    assert (parsed.year, parsed.month, parsed.day, parsed.hour, parsed.minute) == (
+        2026,
+        8,
+        23,
+        22,
+        50,
+    )
+
+
+def test_parse_published_at_samakal_returns_none_for_unrecognized_text():
+    assert parse_published_at("samakal", "unknown format", None) is None
+    assert parse_published_at("samakal", "", None) is None

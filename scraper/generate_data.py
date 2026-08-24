@@ -1,6 +1,6 @@
 """Generate a real-data JSON snapshot for the NewsHead app.
 
-Scrapes 5 Bengali/English newspaper sources, classifies articles into the
+Scrapes 8 Bengali/English newspaper sources, classifies articles into the
 app's fixed category taxonomy, and writes articles.json at the repo root.
 Published to GitHub Pages by .github/workflows/scrape.yml, which runs this
 4x/day.
@@ -59,6 +59,9 @@ SOURCE_DISPLAY_NAMES = {
     "dhakatribune": "Dhaka Tribune",
     "dailystar": "The Daily Star",
     "ittefaq": "Ittefaq",
+    "tbsnews": "The Business Standard",
+    "banglatribune": "Bangla Tribune",
+    "samakal": "Samakal",
 }
 
 # Per-source display language for formatting an article's publishedAt on
@@ -70,6 +73,9 @@ SOURCE_LANGUAGE = {
     "dhakatribune": "en",
     "dailystar": "en",
     "ittefaq": "bn",
+    "tbsnews": "en",
+    "banglatribune": "bn",
+    "samakal": "bn",
 }
 
 # Bilingual (English + Bengali) keyword lists used to classify an article's
@@ -291,6 +297,66 @@ SECTION_CATEGORY_MAP = {
         "opinion": "opinion",
         "news": "country",
         "environment": "tech",
+    },
+    "tbsnews": {
+        # tbsnews's discover_sections()[0] (Main) is whichever section
+        # happens to have the newest card on /latest on a given run, not a
+        # fixed section - same "Main is dynamic, map every discovered slug"
+        # approach as dailystar above.
+        "bangladesh": "country",
+        "economy": "business",
+        "world": "world",
+        "worldbiz": "world",
+        "sports": "sports",
+        "features": "lifestyle",
+        "tech": "tech",
+        "splash": "miscellaneous",
+        "offbeat": "miscellaneous",
+        "magazine": "lifestyle",
+        "supplement": "miscellaneous",
+        "environment": "tech",
+        "long-read": "lifestyle",
+        "interviews": "opinion",
+        "thoughts": "opinion",
+        # Confirmed live on /latest (2026-08-24) - since sections are
+        # derived from URL path segments rather than a fixed nav, this list
+        # isn't closed; audit again with scripts/discover_sections.py if
+        # unmapped-slug articles start getting silently dropped.
+        "foreign-policy": "world",
+        "nbr": "business",
+        "infograph": "miscellaneous",
+        "top-news": "country",
+        "rohingya-crisis": "world",
+    },
+    "banglatribune": {
+        # sections[0] "national" is Main, excluded (see CORE_SECTION_SLUGS
+        # in scraper/sources/banglatribune.py for what's pre-filtered).
+        "politics": "politics",
+        "law-and-crime": "country",
+        "country": "country",
+        "foreign": "world",
+        "exclusive": "miscellaneous",
+        "business": "business",
+        "entertainment": "entertainment",
+        "sport": "sports",
+        "tech-and-gadget": "tech",
+        "educations": "education",
+        "health": "health",
+        "lifestyle": "lifestyle",
+        "literature": "arts_literature",
+    },
+    "samakal": {
+        # sections[0] "bangladesh" is Main, excluded (see CORE_SECTION_SLUGS
+        # in scraper/sources/samakal.py for what's pre-filtered).
+        "politics": "politics",
+        "economics": "business",
+        "international": "world",
+        "sports": "sports",
+        "entertainment": "entertainment",
+        "crime": "country",
+        "opinion": "opinion",
+        "capital": "city",
+        "lifestyle": "lifestyle",
     },
 }
 

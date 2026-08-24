@@ -17,13 +17,22 @@ category taxonomy, scraper sources, or app data flow changes.
 - [ ] Trigger `.github/workflows/scrape.yml`: `gh workflow run scrape.yml`.
 - [ ] `gh run watch <run-id> --exit-status` until it finishes.
 - [ ] Read the job log (`gh run view --job=<job-id> --log`) and check each of
-      the 5 sources logs `INFO: <source>: collected N article(s)`.
+      the 8 sources logs `INFO: <source>: collected N article(s)`.
   - **Known limitation, not a regression:** jugantor, dhakatribune, and
     ittefaq return `403 Forbidden` for every section when scraped from
     GitHub-hosted runner IPs (bot protection on those sites' end) — this
     reproduces on every run, old and new. Expect 0 articles from those 3
-    sources in CI; only prothomalo and dailystar reliably succeed there.
-    A local run from a residential IP collects from all 5.
+    sources in CI; only prothomalo, dailystar, tbsnews, banglatribune, and
+    samakal reliably succeed there. A local run from a residential IP
+    collects from all 8.
+  - **2026-08-24 source research:** curled ~20 more Bangladeshi newspaper
+    sites with a spoofed desktop UA to check for Cloudflare blocking before
+    adding sources. Confirmed Cloudflare-blocked (403 / bot-challenge, same
+    failure mode as jugantor/dhakatribune/ittefaq): bdnews24, kalerkantho,
+    bd-pratidin, jagonews24, risingbd, daily-sun, banglanews24 — not
+    attempted. Confirmed clean but not yet added: see `docs/ideas.md`
+    "More scraper sources" backlog. Confirmed clean and added this session:
+    tbsnews, banglatribune, samakal.
   - Total article count should be sane (tens, not zero across every source,
     not thousands).
 
@@ -41,7 +50,8 @@ local file from a manual `python scripts/generate.py` run) and verify:
       `imageUrl`, `articleUrl` (`snippet` may legitimately be empty).
 - [ ] No duplicate `id`s.
 - [ ] Every article's `language` is `"bn"` or `"en"`, matching its `source`
-      (jugantor/prothomalo/ittefaq → `bn`; dhakatribune/dailystar → `en`).
+      (jugantor/prothomalo/ittefaq/banglatribune/samakal → `bn`;
+      dhakatribune/dailystar/tbsnews → `en`).
 - [ ] `publishedAt` is either a parseable ISO-8601 datetime or `null` — never
       an empty string or a raw source-specific phrase leaking through.
   - Sanity, not a bug, if seen: dailystar's fill rate is only as good as its
@@ -255,3 +265,52 @@ files to their pre-session state. Recovered via the stray stash entry each
 collision left behind; no work was ultimately lost, but future prompts to
 parallel agents editing the same working tree should explicitly forbid git
 operations beyond read-only status checks.
+
+## 9. Three new scraper sources: The Business Standard, Bangla Tribune, Samakal (2026-08-24)
+
+Researched ~20 additional Bangladeshi newspapers, curl-tested each for
+Cloudflare blocking (see §2 above and `docs/ideas.md`), then added the 3
+that came back clean: `scraper/sources/tbsnews.py` (English),
+`scraper/sources/banglatribune.py` (Bangla), `scraper/sources/samakal.py`
+(Bangla) — one module per source, built in parallel by independent
+subagents that fetched real live pages before writing selectors (per the
+lesson in §7, no hand-written fixtures). Wired into
+`scraper/config.py::SOURCES`, `scraper/generate_data.py`
+(`SOURCE_DISPLAY_NAMES`, `SOURCE_LANGUAGE`, `SECTION_CATEGORY_MAP`), and
+`scraper/timestamps.py` (2 new parser cases: tbsnews's abbreviated relative
+time `"6m"/"1h"/"1d"`, samakal's 24-hour Bengali absolute datetime with no
+AM/PM marker — banglatribune reused the existing ISO-offset parser, same
+CMS as dhakatribune).
+
+An Opus-level audit pass over the diff (the one designated Opus step for
+this task) caught two real bugs before commit: `samakal.py`'s
+`parse_articles()` only selected the lead card + top-4 cards per section,
+silently missing a further ~10-story `div.CatSubList-area` list that
+carries its own summary/timestamp markup (fixed by extending the card
+selector — samakal's per-run count went 50 → 150); and `tbsnews`'s
+sections are derived from each article URL's own path segment rather than
+a fixed nav, so 5 real slugs (`foreign-policy`, `nbr`, `infograph`,
+`top-news`, `rohingya-crisis`) had no `SECTION_CATEGORY_MAP`/
+`SECTION_DISPLAY_NAMES` entry and were being silently dropped by
+`classify_category` (fixed by mapping all 5). Also added the missing
+`tests/test_tbsnews_sections.py`, `tests/test_banglatribune_sections.py`,
+`tests/test_samakal_sections.py` and timestamp-parser test cases the audit
+flagged as absent, and hardened the 2 new `timestamps.py` parsers (case-
+sensitive unit letters, `OverflowError` guard) per its minor-nit list.
+
+Verified with a full local `python scripts/generate.py` run after fixes
+(all 8 sources succeeded; 75 pytest suite green, up from 58): `tbsnews` 177
+articles, `banglatribune` 251 (211/251 `publishedAt` filled), `samakal` 150
+(150/150). Data contract re-validated against the live output — 17
+categories, no unknown categories, no missing required fields, no
+duplicate ids, every `language` is `bn`/`en` and matches its source.
+
+**Not yet confirmed:** whether these 3 also hit the CI-runner-IP 403
+pattern from §2 — that curl-based research was done from a residential IP,
+same limitation as the original jugantor/dhakatribune/ittefaq finding.
+Confirm on the next `gh workflow run scrape.yml` and update §2's fill list
+if any of the 3 turn out to be CI-blocked too.
+
+**Parked as future work**, not attempted this session: the 9 other
+confirmed-clean candidates and 7 newly-confirmed-blocked sites listed in
+`docs/ideas.md`.
