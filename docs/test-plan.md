@@ -393,6 +393,47 @@ test_bdnews24_sections.py`, `tests/test_bdnews24bangla_sections.py`,
 `tests/test_dhakapost_sections.py`), all passing alongside the existing
 suite.
 
-**Not yet confirmed:** whether these 3 also succeed from the CI self-hosted
-runner, not just this session's sandbox network — confirm on the next
-`gh workflow run scrape.yml`.
+**CI-runner confirmation (2026-08-25):** the first real `gh workflow run
+scrape.yml` after merging (`32785168535`, scheduled) failed in 19s, before
+the scraper even ran — `git clean -ffdx` on checkout hit `Permission
+denied` unlinking files under `scraper/__pycache__/`, because the scrape
+container runs as root and bind-mounts the host repo
+(`docker run -v "$PWD:/app"`), so Python's auto-generated `.pyc` files from
+the *previous* run were left root-owned on the runner's disk. Fixed by
+adding `ENV PYTHONDONTWRITEBYTECODE=1` to the `Dockerfile` (commit
+`58aa7a3`) and manually `chown`-ing the stale files via a throwaway root
+container (`docker run --rm -v <path>:/repo alpine chown -R ...`) since the
+runner user has no passwordless sudo.
+
+A second manual run (`32797424765`) then hit a real capacity problem: the
+job's `timeout-minutes: 40` was sized for the pre-2026-08-25 8-source
+taxonomy and didn't account for bdnews24bangla's ~290 per-article
+enrichment fetches (see §10 above) — GitHub cancelled the job at exactly
+40m0s ("The operation was canceled") mid-scrape, and the `docker run`
+process was orphaned on the runner (had to `docker stop`/`rm` it manually,
+since `--rm` doesn't fire on a killed parent). Fixed by bumping
+`timeout-minutes` to 90 (commit `a8819e8`).
+
+A third run (`32800175737`), after both fixes, succeeded end-to-end
+(checkout → build → scrape → publish, all green) and confirms all 3 new
+sources work from the CI self-hosted runner, not just this session's
+sandbox network: `bdnews24` 20 articles, `bdnews24bangla` 314, `dhakapost`
+147 — matching the local-run counts closely. Data contract re-validated
+against the live published `https://mehedibangladeshi.github.io/newshead/
+articles.json` (2392 total articles, `generated_at` 2026-08-25): 17
+categories, no unknown categories, no missing required fields, no
+duplicate ids, every `language` is `bn`/`en`, and `publishedAt` fill rates
+match the expected per-source shape (`bdnews24` 20/20, `dhakapost` 147/147,
+`bdnews24bangla` 0/314 — the last is by design, see §10).
+
+**New finding, unrelated to this session's source additions:** jugantor
+returned `403 Forbidden` on every section from the residential self-hosted
+runner IP in both `32797424765` and `32800175737` (0 articles collected
+either time), despite succeeding from the same runner in earlier sessions.
+This means jugantor's Cloudflare protection has started blocking this
+runner's IP specifically (IP-reputation drift over time, the same failure
+mode as the original GitHub-hosted-runner block, just now hitting the
+residential IP too) — not a regression from any change in this session.
+The pipeline's designed behavior (a 0-article source is a warning, not a
+run failure) worked correctly; no code change needed, but this is worth
+watching on subsequent scheduled runs.
