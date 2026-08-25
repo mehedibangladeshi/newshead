@@ -13,11 +13,17 @@ concurrency:
 jobs:
   scrape:
     runs-on: [self-hosted, Linux]
-    # The uncapped taxonomy (100 mapped sections across 5 sources) takes
-    # ~13 minutes for the scrape step alone on a local run; 20 minutes left
-    # too little headroom for checkout/publish overhead and CI network
-    # variability.
-    timeout-minutes: 40
+    # The uncapped taxonomy (100+ mapped sections across 8 sources) took
+    # ~13 minutes for the scrape step alone before 2026-08-25's 3-source
+    # addition. bdnews24bangla alone now adds ~25-30 minutes on top of that:
+    # its listing cards mostly lack a combined thumbnail+summary, so
+    # enrich_item() falls back to a full per-article fetch for ~290 of its
+    # ~330 articles (confirmed live: a real `gh workflow run scrape.yml`
+    # hit the old 40-minute limit and got cancelled with "The operation was
+    # canceled" mid-run). 90 minutes leaves real headroom above the ~55-60
+    # minute worst case seen locally, for checkout/build overhead and CI
+    # network variability.
+    timeout-minutes: 90
     permissions:
       contents: write
     steps:
