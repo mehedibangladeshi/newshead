@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/app_category.dart';
+import '../models/filter_option.dart';
 import '../models/news_article.dart';
 import 'article_cache.dart';
 
@@ -28,6 +29,30 @@ List<AppCategory> parseCategories(String jsonString) {
   }
   return categories.isEmpty ? kDefaultCategories : categories;
 }
+
+List<FilterOption> _parseFilterOptions(String jsonString, String field) {
+  final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+  final rawOptions = decoded[field] as List<dynamic>?;
+  if (rawOptions == null) return const [];
+
+  final options = <FilterOption>[];
+  for (final raw in rawOptions) {
+    try {
+      final map = raw as Map<String, dynamic>;
+      options.add(FilterOption(
+        key: map['key'] as String,
+        label: map['label'] as String,
+      ));
+    } catch (_) {
+      continue;
+    }
+  }
+  return options;
+}
+
+List<FilterOption> parseLanguages(String jsonString) => _parseFilterOptions(jsonString, 'languages');
+
+List<FilterOption> parseSources(String jsonString) => _parseFilterOptions(jsonString, 'sources');
 
 DateTime? _tryParsePublishedAt(Object? raw) {
   if (raw is! String) return null;
@@ -67,6 +92,8 @@ List<NewsArticle> articlesForCategory(List<NewsArticle> all, String category) {
 class ArticlesFetchResult {
   final List<NewsArticle> articles;
   final List<AppCategory> categories;
+  final List<FilterOption> languages;
+  final List<FilterOption> sources;
   // The raw response/cache body this came from, so a later fetch can tell
   // whether the source actually returned new content.
   final String? rawBody;
@@ -77,6 +104,8 @@ class ArticlesFetchResult {
   const ArticlesFetchResult({
     required this.articles,
     required this.categories,
+    required this.languages,
+    required this.sources,
     required this.rawBody,
     required this.fromNetwork,
   });
@@ -92,6 +121,8 @@ Future<ArticlesFetchResult> fetchArticles({
     if (response.statusCode == 200) {
       final articles = parseArticles(response.body);
       final categories = parseCategories(response.body);
+      final languages = parseLanguages(response.body);
+      final sources = parseSources(response.body);
       try {
         await cache.write(response.body);
       } catch (_) {
@@ -101,6 +132,8 @@ Future<ArticlesFetchResult> fetchArticles({
       return ArticlesFetchResult(
         articles: articles,
         categories: categories,
+        languages: languages,
+        sources: sources,
         rawBody: response.body,
         fromNetwork: true,
       );
@@ -116,6 +149,8 @@ Future<ArticlesFetchResult> fetchArticles({
       return ArticlesFetchResult(
         articles: parseArticles(cached),
         categories: parseCategories(cached),
+        languages: parseLanguages(cached),
+        sources: parseSources(cached),
         rawBody: cached,
         fromNetwork: false,
       );
@@ -124,6 +159,8 @@ Future<ArticlesFetchResult> fetchArticles({
       return const ArticlesFetchResult(
         articles: [],
         categories: kDefaultCategories,
+        languages: [],
+        sources: [],
         rawBody: null,
         fromNetwork: false,
       );
@@ -132,6 +169,8 @@ Future<ArticlesFetchResult> fetchArticles({
   return const ArticlesFetchResult(
     articles: [],
     categories: kDefaultCategories,
+    languages: [],
+    sources: [],
     rawBody: null,
     fromNetwork: false,
   );

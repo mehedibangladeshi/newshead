@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:newshead/data/article_cache.dart';
 import 'package:newshead/models/app_category.dart';
+import 'package:newshead/models/filter_option.dart';
 
 class InMemoryArticleCache implements ArticleCache {
   String? stored;
@@ -53,6 +54,30 @@ const _jsonWithoutCategories = '''
   "articles": [
     {"id": "a1", "category": "politics", "source": "Jugantor", "headline": "H1", "snippet": "S1", "imageUrl": "https://example.com/1.jpg", "articleUrl": "https://example.com/a1"}
   ]
+}
+''';
+
+const _jsonWithLanguagesAndSources = '''
+{
+  "generated_at": "2026-08-20",
+  "categories": [{"key": "main", "label": "Main"}],
+  "languages": [
+    {"key": "bn", "label": "Bangla"},
+    {"key": "en", "label": "English"}
+  ],
+  "sources": [
+    {"key": "Jugantor", "label": "Jugantor"},
+    {"key": "The Daily Star", "label": "The Daily Star"}
+  ],
+  "articles": []
+}
+''';
+
+const _jsonWithoutLanguagesOrSources = '''
+{
+  "generated_at": "2026-08-20",
+  "categories": [{"key": "main", "label": "Main"}],
+  "articles": []
 }
 ''';
 
@@ -275,5 +300,61 @@ void main() {
     expect(articles.length, 1);
     expect(articles[0].id, 'a1');
     expect(articles[0].language, 'en');
+  });
+
+  test('parseLanguages parses every language in order', () {
+    expect(parseLanguages(_jsonWithLanguagesAndSources), [
+      const FilterOption(key: 'bn', label: 'Bangla'),
+      const FilterOption(key: 'en', label: 'English'),
+    ]);
+  });
+
+  test('parseLanguages returns an empty list when languages is missing', () {
+    expect(parseLanguages(_jsonWithoutLanguagesOrSources), isEmpty);
+  });
+
+  test('parseSources parses every source in order', () {
+    expect(parseSources(_jsonWithLanguagesAndSources), [
+      const FilterOption(key: 'Jugantor', label: 'Jugantor'),
+      const FilterOption(key: 'The Daily Star', label: 'The Daily Star'),
+    ]);
+  });
+
+  test('parseSources returns an empty list when sources is missing', () {
+    expect(parseSources(_jsonWithoutLanguagesOrSources), isEmpty);
+  });
+
+  test('fetchArticles returns parsed languages and sources from a successful response', () async {
+    final client = MockClient((request) async => http.Response(_jsonWithLanguagesAndSources, 200));
+    final cache = InMemoryArticleCache();
+
+    final result = await fetchArticles(
+      sourceUrl: Uri.parse('https://example.com/articles.json'),
+      client: client,
+      cache: cache,
+    );
+
+    expect(result.languages, [
+      const FilterOption(key: 'bn', label: 'Bangla'),
+      const FilterOption(key: 'en', label: 'English'),
+    ]);
+    expect(result.sources, [
+      const FilterOption(key: 'Jugantor', label: 'Jugantor'),
+      const FilterOption(key: 'The Daily Star', label: 'The Daily Star'),
+    ]);
+  });
+
+  test('fetchArticles returns empty languages and sources when there is no cache and no network', () async {
+    final client = MockClient((request) async => throw Exception('network down'));
+    final cache = InMemoryArticleCache();
+
+    final result = await fetchArticles(
+      sourceUrl: Uri.parse('https://example.com/articles.json'),
+      client: client,
+      cache: cache,
+    );
+
+    expect(result.languages, isEmpty);
+    expect(result.sources, isEmpty);
   });
 }

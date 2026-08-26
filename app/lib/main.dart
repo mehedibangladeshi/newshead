@@ -7,8 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 import 'data/article_cache.dart';
 import 'data/article_repository.dart';
-import 'data/category_filter_store.dart';
+import 'data/filter_store.dart';
 import 'models/app_category.dart';
+import 'models/filter_option.dart';
 import 'models/news_article.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -37,7 +38,9 @@ Future<void> main() async {
   final documentsDir = await getApplicationDocumentsDirectory();
   final cache = FileArticleCache('${documentsDir.path}/articles_cache.json');
   final client = http.Client();
-  final filterStore = SharedPreferencesCategoryFilterStore();
+  final categoryFilterStore = SharedPreferencesFilterStore(prefKey: kExcludedCategoryKeysPrefKey);
+  final languageFilterStore = SharedPreferencesFilterStore(prefKey: kExcludedLanguageKeysPrefKey);
+  final sourceFilterStore = SharedPreferencesFilterStore(prefKey: kExcludedSourceKeysPrefKey);
 
   final result = await fetchArticles(
     sourceUrl: kArticlesUrl,
@@ -48,32 +51,44 @@ Future<void> main() async {
   runApp(NewsHeadApp(
     initialArticles: result.articles,
     initialCategories: result.categories,
+    initialLanguages: result.languages,
+    initialSources: result.sources,
     initialRawBody: result.rawBody,
     sourceUrl: kArticlesUrl,
     client: client,
     cache: cache,
-    filterStore: filterStore,
+    categoryFilterStore: categoryFilterStore,
+    languageFilterStore: languageFilterStore,
+    sourceFilterStore: sourceFilterStore,
   ));
 }
 
 class NewsHeadApp extends StatelessWidget {
   final List<NewsArticle> initialArticles;
   final List<AppCategory> initialCategories;
+  final List<FilterOption> initialLanguages;
+  final List<FilterOption> initialSources;
   final String? initialRawBody;
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
-  final CategoryFilterStore filterStore;
+  final FilterStore categoryFilterStore;
+  final FilterStore languageFilterStore;
+  final FilterStore sourceFilterStore;
 
   const NewsHeadApp({
     super.key,
     required this.initialArticles,
     required this.initialCategories,
+    required this.initialLanguages,
+    required this.initialSources,
     required this.initialRawBody,
     required this.sourceUrl,
     required this.client,
     required this.cache,
-    required this.filterStore,
+    required this.categoryFilterStore,
+    required this.languageFilterStore,
+    required this.sourceFilterStore,
   });
 
   @override
@@ -84,11 +99,15 @@ class NewsHeadApp extends StatelessWidget {
       home: HomeScreen(
         initialArticles: initialArticles,
         initialCategories: initialCategories,
+        initialLanguages: initialLanguages,
+        initialSources: initialSources,
         initialRawBody: initialRawBody,
         sourceUrl: sourceUrl,
         client: client,
         cache: cache,
-        filterStore: filterStore,
+        categoryFilterStore: categoryFilterStore,
+        languageFilterStore: languageFilterStore,
+        sourceFilterStore: sourceFilterStore,
       ),
     );
   }

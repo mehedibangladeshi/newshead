@@ -68,4 +68,67 @@ void main() {
     );
     expect(result, [const AppCategory(key: 'main', label: 'Main')]);
   });
+
+  group('visibleArticles', () {
+    test('keeps every article when nothing is excluded', () {
+      final articles = [
+        _articleWith(language: 'bn', source: 'Jugantor'),
+        _articleWith(language: 'en', source: 'The Daily Star'),
+      ];
+      final result = visibleArticles(
+        articles: articles,
+        excludedLanguageKeys: const {},
+        excludedSourceKeys: const {},
+      );
+      expect(result, articles);
+    });
+
+    test('drops an article whose language is excluded', () {
+      final result = visibleArticles(
+        articles: [
+          _articleWith(language: 'bn', source: 'Jugantor'),
+          _articleWith(language: 'en', source: 'The Daily Star'),
+        ],
+        excludedLanguageKeys: const {'bn'},
+        excludedSourceKeys: const {},
+      );
+      expect(result.map((a) => a.language), ['en']);
+    });
+
+    test('drops an article whose source is excluded', () {
+      final result = visibleArticles(
+        articles: [
+          _articleWith(language: 'bn', source: 'Jugantor'),
+          _articleWith(language: 'en', source: 'The Daily Star'),
+        ],
+        excludedLanguageKeys: const {},
+        excludedSourceKeys: const {'Jugantor'},
+      );
+      expect(result.map((a) => a.source), ['The Daily Star']);
+    });
+
+    test('drops an article excluded by either language or source (OR within exclusion)', () {
+      final result = visibleArticles(
+        articles: [
+          _articleWith(language: 'bn', source: 'Jugantor'),
+          _articleWith(language: 'en', source: 'The Daily Star'),
+          _articleWith(language: 'en', source: 'Ittefaq'),
+        ],
+        excludedLanguageKeys: const {'bn'},
+        excludedSourceKeys: const {'Ittefaq'},
+      );
+      expect(result.map((a) => a.source), ['The Daily Star']);
+    });
+  });
 }
+
+NewsArticle _articleWith({required String language, required String source}) => NewsArticle(
+      id: 'id-$language-$source',
+      category: 'main',
+      source: source,
+      headline: 'H',
+      snippet: 'S',
+      imageUrl: 'https://example.com/i.jpg',
+      articleUrl: 'https://example.com/a',
+      language: language,
+    );

@@ -15,3 +15,17 @@ List<AppCategory> visibleCategories({
       .where((c) => !excludedKeys.contains(c.key))
       .toList();
 }
+
+/// Articles surviving the reader's Language and Source filters, independent
+/// of and applied before the category filter — an article is hidden if
+/// either its language or its source is excluded.
+List<NewsArticle> visibleArticles({
+  required List<NewsArticle> articles,
+  required Set<String> excludedLanguageKeys,
+  required Set<String> excludedSourceKeys,
+}) {
+  return articles
+      .where((a) => !excludedLanguageKeys.contains(a.language))
+      .where((a) => !excludedSourceKeys.contains(a.source))
+      .toList();
+}

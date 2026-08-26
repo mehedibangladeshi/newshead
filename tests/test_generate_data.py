@@ -103,7 +103,12 @@ def test_interleave_by_source_keeps_every_article_for_a_single_source():
     assert len(result) == 20
 
 
-from scraper.generate_data import build_output, CATEGORY_DEFINITIONS
+from scraper.generate_data import (
+    build_output,
+    CATEGORY_DEFINITIONS,
+    LANGUAGE_DISPLAY_NAMES,
+    SOURCE_DISPLAY_NAMES,
+)
 
 
 def test_build_output_includes_ordered_category_definitions():
@@ -113,6 +118,31 @@ def test_build_output_includes_ordered_category_definitions():
         {"key": key, "label": label} for key, label in CATEGORY_DEFINITIONS
     ]
     assert output["categories"][0]["key"] == "main"
+
+
+def test_build_output_includes_alphabetically_sorted_languages():
+    output = build_output("2026-08-23", [])
+    assert output["languages"] == [
+        {"key": "bn", "label": "Bangla"},
+        {"key": "en", "label": "English"},
+    ]
+
+
+def test_build_output_includes_alphabetically_sorted_sources():
+    output = build_output("2026-08-23", [])
+    expected = sorted(
+        ({"key": name, "label": name} for name in SOURCE_DISPLAY_NAMES.values()),
+        key=lambda d: d["label"].casefold(),
+    )
+    assert output["sources"] == expected
+    assert len(output["sources"]) == len(SOURCE_DISPLAY_NAMES)
+
+
+def test_language_display_names_covers_every_language_used_by_a_source():
+    from scraper.generate_data import SOURCE_LANGUAGE
+
+    for language_code in SOURCE_LANGUAGE.values():
+        assert language_code in LANGUAGE_DISPLAY_NAMES
 
 
 def test_build_output_includes_the_given_articles():

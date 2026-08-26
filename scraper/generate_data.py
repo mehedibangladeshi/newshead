@@ -70,6 +70,11 @@ SOURCE_DISPLAY_NAMES = {
 # Per-source display language for formatting an article's publishedAt on
 # the client — mirrors the bengali_date/english_date split each source
 # module already uses for its own format_date().
+LANGUAGE_DISPLAY_NAMES = {
+    "bn": "Bangla",
+    "en": "English",
+}
+
 SOURCE_LANGUAGE = {
     "jugantor": "bn",
     "prothomalo": "bn",
@@ -592,6 +597,14 @@ def build_output(edition_date, articles):
     return {
         "generated_at": edition_date,
         "categories": [{"key": key, "label": label} for key, label in CATEGORY_DEFINITIONS],
+        "languages": sorted(
+            ({"key": key, "label": label} for key, label in LANGUAGE_DISPLAY_NAMES.items()),
+            key=lambda d: d["label"].casefold(),
+        ),
+        "sources": sorted(
+            ({"key": name, "label": name} for name in set(SOURCE_DISPLAY_NAMES.values())),
+            key=lambda d: d["label"].casefold(),
+        ),
         "articles": articles,
     }
 

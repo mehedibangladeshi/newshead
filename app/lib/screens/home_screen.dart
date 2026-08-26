@@ -3,33 +3,42 @@ import 'package:http/http.dart' as http;
 
 import '../data/article_cache.dart';
 import '../data/article_repository.dart';
-import '../data/category_filter_store.dart';
 import '../data/category_visibility.dart';
+import '../data/filter_store.dart';
 import '../models/app_category.dart';
+import '../models/filter_option.dart';
 import '../models/news_article.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import 'category_feed.dart';
-import 'category_filter_sheet.dart';
+import 'filter_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<NewsArticle> initialArticles;
   final List<AppCategory> initialCategories;
+  final List<FilterOption> initialLanguages;
+  final List<FilterOption> initialSources;
   final String? initialRawBody;
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
-  final CategoryFilterStore filterStore;
+  final FilterStore categoryFilterStore;
+  final FilterStore languageFilterStore;
+  final FilterStore sourceFilterStore;
 
   const HomeScreen({
     super.key,
     required this.initialArticles,
     required this.initialCategories,
+    required this.initialLanguages,
+    required this.initialSources,
     required this.initialRawBody,
     required this.sourceUrl,
     required this.client,
     required this.cache,
-    required this.filterStore,
+    required this.categoryFilterStore,
+    required this.languageFilterStore,
+    required this.sourceFilterStore,
   });
 
   @override
@@ -64,7 +73,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late List<NewsArticle> _articles;
   late List<AppCategory> _categories;
+  late List<FilterOption> _languages;
+  late List<FilterOption> _sources;
   Set<String> _excludedCategoryKeys = {};
+  Set<String> _excludedLanguageKeys = {};
+  Set<String> _excludedSourceKeys = {};
+  late List<NewsArticle> _filteredArticles;
   late List<AppCategory> _visibleCategories;
   String? _lastRawBody;
   // Bumped on every successful refresh so each CategoryFeed remounts fresh
@@ -77,30 +91,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _articles = widget.initialArticles;
     _categories = widget.initialCategories;
+    _languages = widget.initialLanguages;
+    _sources = widget.initialSources;
     _lastRawBody = widget.initialRawBody;
+    _filteredArticles = _articles;
     _visibleCategories = visibleCategories(
       fetchedCategories: _categories,
-      articles: _articles,
+      articles: _filteredArticles,
       excludedKeys: _excludedCategoryKeys,
     );
     _initControllers(_visibleCategories.length);
-    _loadExcludedCategoryKeys();
+    _loadExcludedKeys();
   }
 
-  Future<void> _loadExcludedCategoryKeys() async {
-    final stored = await widget.filterStore.readExcludedKeys();
+  Future<void> _loadExcludedKeys() async {
+    final results = await Future.wait([
+      widget.categoryFilterStore.readExcludedKeys(),
+      widget.languageFilterStore.readExcludedKeys(),
+      widget.sourceFilterStore.readExcludedKeys(),
+    ]);
     if (!mounted) return;
-    _applyExcludedKeys(stored);
+    _applyExcludedKeys(
+      excludedCategoryKeys: results[0],
+      excludedLanguageKeys: results[1],
+      excludedSourceKeys: results[2],
+    );
   }
 
-  void _applyExcludedKeys(Set<String> excludedKeys) {
+  void _applyExcludedKeys({
+    Set<String>? excludedCategoryKeys,
+    Set<String>? excludedLanguageKeys,
+    Set<String>? excludedSourceKeys,
+  }) {
+    final nextExcludedCategoryKeys = excludedCategoryKeys ?? _excludedCategoryKeys;
+    final nextExcludedLanguageKeys = excludedLanguageKeys ?? _excludedLanguageKeys;
+    final nextExcludedSourceKeys = excludedSourceKeys ?? _excludedSourceKeys;
+
+    final nextFilteredArticles = visibleArticles(
+      articles: _articles,
+      excludedLanguageKeys: nextExcludedLanguageKeys,
+      excludedSourceKeys: nextExcludedSourceKeys,
+    );
     final nextVisible = visibleCategories(
       fetchedCategories: _categories,
-      articles: _articles,
-      excludedKeys: excludedKeys,
+      articles: nextFilteredArticles,
+      excludedKeys: nextExcludedCategoryKeys,
     );
     setState(() {
-      _excludedCategoryKeys = excludedKeys;
+      _excludedCategoryKeys = nextExcludedCategoryKeys;
+      _excludedLanguageKeys = nextExcludedLanguageKeys;
+      _excludedSourceKeys = nextExcludedSourceKeys;
+      _filteredArticles = nextFilteredArticles;
       if (nextVisible.length != _visibleCategories.length) {
         _disposeControllers();
         _initControllers(nextVisible.length);
@@ -109,23 +150,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _handleFilterToggle(String categoryKey, bool isChecked) {
+  void _handleCategoryToggle(String categoryKey, bool isChecked) {
     final next = {..._excludedCategoryKeys};
     if (isChecked) {
       next.remove(categoryKey);
     } else {
       next.add(categoryKey);
     }
-    _applyExcludedKeys(next);
-    widget.filterStore.writeExcludedKeys(next);
+    _applyExcludedKeys(excludedCategoryKeys: next);
+    widget.categoryFilterStore.writeExcludedKeys(next);
+  }
+
+  void _handleLanguageToggle(String languageKey, bool isChecked) {
+    final next = {..._excludedLanguageKeys};
+    if (isChecked) {
+      next.remove(languageKey);
+    } else {
+      next.add(languageKey);
+    }
+    _applyExcludedKeys(excludedLanguageKeys: next);
+    widget.languageFilterStore.writeExcludedKeys(next);
+  }
+
+  void _handleSourceToggle(String sourceKey, bool isChecked) {
+    final next = {..._excludedSourceKeys};
+    if (isChecked) {
+      next.remove(sourceKey);
+    } else {
+      next.add(sourceKey);
+    }
+    _applyExcludedKeys(excludedSourceKeys: next);
+    widget.sourceFilterStore.writeExcludedKeys(next);
   }
 
   void _openFilterSheet() {
-    showCategoryFilterSheet(
+    showFilterSheet(
       context: context,
       allCategories: _categories,
-      excludedKeys: _excludedCategoryKeys,
-      onToggle: _handleFilterToggle,
+      excludedCategoryKeys: _excludedCategoryKeys,
+      onToggleCategory: _handleCategoryToggle,
+      allLanguages: _languages,
+      excludedLanguageKeys: _excludedLanguageKeys,
+      onToggleLanguage: _handleLanguageToggle,
+      allSources: _sources,
+      excludedSourceKeys: _excludedSourceKeys,
+      onToggleSource: _handleSourceToggle,
     );
   }
 
@@ -246,9 +315,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }
 
       if (!mounted) return;
+      final nextFilteredArticles = visibleArticles(
+        articles: articles,
+        excludedLanguageKeys: _excludedLanguageKeys,
+        excludedSourceKeys: _excludedSourceKeys,
+      );
       final nextVisible = visibleCategories(
         fetchedCategories: result.categories,
-        articles: articles,
+        articles: nextFilteredArticles,
         excludedKeys: _excludedCategoryKeys,
       );
       setState(() {
@@ -256,6 +330,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _lastRawBody = result.rawBody;
         _refreshGeneration++;
         _categories = result.categories;
+        _languages = result.languages;
+        _sources = result.sources;
+        _filteredArticles = nextFilteredArticles;
         if (nextVisible.length != _visibleCategories.length) {
           _disposeControllers();
           _initControllers(nextVisible.length);
@@ -270,6 +347,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }
     }
   }
+
+  bool get _hasActiveFilter =>
+      _excludedCategoryKeys.isNotEmpty ||
+      _excludedLanguageKeys.isNotEmpty ||
+      _excludedSourceKeys.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             clipBehavior: Clip.none,
                             children: [
                               const Icon(Icons.tune, color: AppColors.textSecondary),
-                              if (_excludedCategoryKeys.isNotEmpty)
+                              if (_hasActiveFilter)
                                 Positioned(
                                   top: -2,
                                   right: -2,
@@ -353,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       return CategoryFeed(
                         key: PageStorageKey('${category.key}#$_refreshGeneration'),
                         category: category.key,
-                        articles: articlesForCategory(_articles, category.key),
+                        articles: articlesForCategory(_filteredArticles, category.key),
                       );
                     },
                   ),

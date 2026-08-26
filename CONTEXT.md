@@ -22,5 +22,11 @@ The explicit, per-source lookup table (`{source_slug: {section_slug: canonical_c
 The output of the reusable `scripts/discover_sections.py` tool: every raw Source Section per source, including ones a source's own `discover_sections()` normally filters out via a curated allowlist (Dhaka Tribune's and Ittefaq's `CORE_SECTION_SLUGS`). Used to design the Canonical Category list and the Section→Category Mapping by hand — bypasses those allowlists rather than trusting them as "complete."
 
 **Visible Category**:
-A Canonical Category currently shown as a pill/tab in the app: it exists in the fetched `categories` list, has at least one fetched article, and the user hasn't unchecked it in the category filter. One derived list drives both the pill bar and the swipeable feed — there's no separate concept of a "tab list" versus a "filter list." Always ordered by the fetched `categories` list's own order (`main` first), never re-sorted by the app.
+A Canonical Category currently shown as a pill/tab in the app: it exists in the fetched `categories` list, has at least one article surviving the Language and Source filters, and the user hasn't unchecked it in the Category filter. One derived list drives both the pill bar and the swipeable feed — there's no separate concept of a "tab list" versus a "filter list." Always ordered by the fetched `categories` list's own order (`main` first), never re-sorted by the app.
 _Avoid_: Tab, active category (both mean this only in passing — use Visible Category for the app-wide derived list itself)
+
+**Filter Dimension**:
+One of the app's three independent ways to hide articles: Category, Language, or Source. Each dimension persists its own set of *excluded* keys (never the checked ones) and combines with the others by AND — an article shows only if none of its category, language, and source are excluded. The three dimensions never cross-reference each other's exclusions, even though today every Source maps to exactly one Language (`SOURCE_LANGUAGE` in `generate_data.py`).
+
+**Filter Option**:
+One selectable (key, label) entry in the Language or Source filter list, sourced from the `languages`/`sources` manifest arrays `generate_data.py` emits in `articles.json` (alongside `categories`) — alphabetically ordered by label. A Source Filter Option's key is the same display-name string stored in an article's `source` field (e.g. `"Bangla Tribune"`), not the backend's internal source slug.
