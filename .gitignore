@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .venv/
 /articles.json
+.claude/scheduled_tasks.lock
