@@ -437,3 +437,17 @@ residential IP too) — not a regression from any change in this session.
 The pipeline's designed behavior (a 0-article source is a warning, not a
 run failure) worked correctly; no code change needed, but this is worth
 watching on subsequent scheduled runs.
+
+**Update:** confirmed this block is Cloudflare's JS challenge, not a flat
+IP-reputation deny — a plain `requests` call gets the "Just a moment..."
+interstitial rather than a hard-closed connection. Added
+`scraper/browser_client.py`, a shared headless-Chromium (Playwright) fetch
+that `jugantor.py`'s `_get()` now falls back to when the plain `requests`
+session fails; confirmed locally end-to-end (16 sections discovered, article
+listings and full article bodies fetched successfully) from a non-runner IP.
+Still unverified from the actual self-hosted runner IP — if that IP's block
+turns out to be a hard reputation-based deny instead, the browser fallback
+won't help either, and this note should be updated with the real CI result.
+This fallback pattern (`try requests, except -> browser_client.get_html()`)
+is meant to be reused by any future source that hits the same Cloudflare
+JS-challenge wall.

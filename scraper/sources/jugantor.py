@@ -6,7 +6,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, config
+from .. import bengali_date, browser_client, config
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -41,9 +41,16 @@ _session = config.make_session()
 
 def _get(url):
     time.sleep(config.REQUEST_DELAY_SECONDS)
-    response = _session.get(url, timeout=config.REQUEST_TIMEOUT)
-    response.raise_for_status()
-    return response.text
+    try:
+        response = _session.get(url, timeout=config.REQUEST_TIMEOUT)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException:
+        # jugantor's Cloudflare has been blocking this runner's IP with a JS
+        # challenge (docs/test-plan.md); a real browser can pass that where
+        # plain requests can't.
+        logger.info("jugantor: falling back to browser fetch for %s", url)
+        return browser_client.get_html(url)
 
 
 def _slug_from_href(href):
