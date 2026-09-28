@@ -51,6 +51,7 @@ Future<void> main() async {
     initialArticles: result.articles,
     initialCategories: result.categories,
     initialRawBody: result.rawBody,
+    initialFromNetwork: result.fromNetwork,
     sourceUrl: kArticlesUrl,
     client: client,
     cache: cache,
@@ -64,6 +65,7 @@ class NewsHeadApp extends StatelessWidget {
   final List<NewsArticle> initialArticles;
   final List<AppCategory> initialCategories;
   final String? initialRawBody;
+  final bool initialFromNetwork;
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
@@ -76,6 +78,7 @@ class NewsHeadApp extends StatelessWidget {
     required this.initialArticles,
     required this.initialCategories,
     required this.initialRawBody,
+    required this.initialFromNetwork,
     required this.sourceUrl,
     required this.client,
     required this.cache,
@@ -93,6 +96,7 @@ class NewsHeadApp extends StatelessWidget {
         initialArticles: initialArticles,
         initialCategories: initialCategories,
         initialRawBody: initialRawBody,
+        initialFromNetwork: initialFromNetwork,
         sourceUrl: sourceUrl,
         client: client,
         cache: cache,

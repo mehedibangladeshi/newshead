@@ -10,6 +10,7 @@ import '../models/app_category.dart';
 import '../models/news_article.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
+import '../widgets/empty_state.dart';
 import 'category_feed.dart';
 import 'category_filter_sheet.dart';
 
@@ -17,6 +18,7 @@ class HomeScreen extends StatefulWidget {
   final List<NewsArticle> initialArticles;
   final List<AppCategory> initialCategories;
   final String? initialRawBody;
+  final bool initialFromNetwork;
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
@@ -29,6 +31,7 @@ class HomeScreen extends StatefulWidget {
     required this.initialArticles,
     required this.initialCategories,
     required this.initialRawBody,
+    required this.initialFromNetwork,
     required this.sourceUrl,
     required this.client,
     required this.cache,
@@ -73,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Set<String> _excludedSourceKeys = {};
   Set<String> _excludedLanguageKeys = {};
   late List<AppCategory> _visibleCategories;
+  late bool _isOffline;
   String? _lastRawBody;
   bool _isSearching = false;
   String _searchQuery = '';
@@ -88,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _articles = widget.initialArticles;
     _categories = widget.initialCategories;
     _lastRawBody = widget.initialRawBody;
+    _isOffline = widget.initialArticles.isEmpty && !widget.initialFromNetwork;
     _visibleCategories = visibleCategories(
       fetchedCategories: _categories,
       articles: _articles,
@@ -331,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _lastRawBody = result.rawBody;
         _refreshGeneration++;
         _categories = result.categories;
+        _isOffline = false;
         if (nextVisible.length != _visibleCategories.length) {
           _disposeControllers();
           _initControllers(nextVisible.length);
@@ -436,13 +442,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           Expanded(
-            child: _visibleCategories.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No stories yet',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  )
+            child: _isOffline
+                ? _OfflineState(onRetry: _handleRefresh)
+                : _visibleCategories.isEmpty
+                ? EmptyState(hasActiveFilters: _excludedCategoryKeys.isNotEmpty)
                 : PageView.builder(
                     // Keyed on the controller's identity so a controller swap
                     // (see _applyExcludedKeys/_handleRefresh, which create a
@@ -464,6 +467,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       return CategoryFeed(
                         key: PageStorageKey('${category.key}#$_refreshGeneration'),
                         category: category.key,
+                        hasActiveFilters: _excludedSourceKeys.isNotEmpty ||
+                            _excludedLanguageKeys.isNotEmpty ||
+                            _searchQuery.isNotEmpty,
                         articles: articlesForCategory(_articles, category.key)
                             .where((a) => visibleSourceKeys.contains(a.source))
                             .where((a) => visibleLanguageKeys.contains(a.language))
@@ -475,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-      bottomNavigationBar: _visibleCategories.isEmpty
+      bottomNavigationBar: _isOffline || _visibleCategories.isEmpty
           ? null
           : ColoredBox(
               color: AppColors.background,
@@ -508,6 +514,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _OfflineState extends StatelessWidget {
+  final Future<void> Function() onRetry;
+
+  const _OfflineState({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            "You're offline",
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Check your connection and try again.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
     );
   }
 }

@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../models/news_article.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/news_card.dart';
 import 'article_web_view_screen.dart';
 
 class CategoryFeed extends StatefulWidget {
   final String category;
   final List<NewsArticle> articles;
+  final bool hasActiveFilters;
 
   const CategoryFeed({
     super.key,
     required this.category,
     required this.articles,
+    this.hasActiveFilters = false,
   });
 
   @override
@@ -56,10 +59,10 @@ class _CategoryFeedState extends State<CategoryFeed>
 
     return widget.articles.isEmpty
         ? ListView(
-            children: const [
+            children: [
               SizedBox(
                 height: 400,
-                child: Center(child: Text('No stories yet')),
+                child: EmptyState(hasActiveFilters: widget.hasActiveFilters),
               ),
             ],
           )
