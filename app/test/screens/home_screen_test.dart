@@ -30,6 +30,28 @@ class InMemoryCategoryFilterStore implements CategoryFilterStore {
   Future<void> writeExcludedKeys(Set<String> keys) async => stored = keys;
 }
 
+class InMemorySourceFilterStore implements SourceFilterStore {
+  Set<String> stored;
+  InMemorySourceFilterStore([Set<String>? initial]) : stored = initial ?? {};
+
+  @override
+  Future<Set<String>> readExcludedKeys() async => stored;
+
+  @override
+  Future<void> writeExcludedKeys(Set<String> keys) async => stored = keys;
+}
+
+class InMemoryLanguageFilterStore implements LanguageFilterStore {
+  Set<String> stored;
+  InMemoryLanguageFilterStore([Set<String>? initial]) : stored = initial ?? {};
+
+  @override
+  Future<Set<String>> readExcludedKeys() async => stored;
+
+  @override
+  Future<void> writeExcludedKeys(Set<String> keys) async => stored = keys;
+}
+
 const _twoCategories = [
   AppCategory(key: 'main', label: 'Main'),
   AppCategory(key: 'politics', label: 'Politics'),
@@ -96,6 +118,8 @@ void main() {
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
           filterStore: InMemoryCategoryFilterStore(),
+          sourceFilterStore: InMemorySourceFilterStore(),
+          languageFilterStore: InMemoryLanguageFilterStore(),
         ),
       ),
     );
@@ -118,6 +142,8 @@ void main() {
           client: client,
           cache: InMemoryArticleCache(),
           filterStore: InMemoryCategoryFilterStore(),
+          sourceFilterStore: InMemorySourceFilterStore(),
+          languageFilterStore: InMemoryLanguageFilterStore(),
         ),
       ),
     );
@@ -147,6 +173,8 @@ void main() {
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
           filterStore: InMemoryCategoryFilterStore(),
+          sourceFilterStore: InMemorySourceFilterStore(),
+          languageFilterStore: InMemoryLanguageFilterStore(),
         ),
       ),
     );
@@ -177,6 +205,8 @@ void main() {
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
           filterStore: InMemoryCategoryFilterStore({'politics'}),
+          sourceFilterStore: InMemorySourceFilterStore(),
+          languageFilterStore: InMemoryLanguageFilterStore(),
         ),
       ),
     );
@@ -197,6 +227,8 @@ void main() {
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
           filterStore: InMemoryCategoryFilterStore(),
+          sourceFilterStore: InMemorySourceFilterStore(),
+          languageFilterStore: InMemoryLanguageFilterStore(),
         ),
       ),
     );
@@ -217,6 +249,8 @@ void main() {
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
           filterStore: InMemoryCategoryFilterStore(),
+          sourceFilterStore: InMemorySourceFilterStore(),
+          languageFilterStore: InMemoryLanguageFilterStore(),
         ),
       ),
     );

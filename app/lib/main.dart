@@ -38,6 +38,8 @@ Future<void> main() async {
   final cache = FileArticleCache('${documentsDir.path}/articles_cache.json');
   final client = http.Client();
   final filterStore = SharedPreferencesCategoryFilterStore();
+  final sourceFilterStore = SharedPreferencesSourceFilterStore();
+  final languageFilterStore = SharedPreferencesLanguageFilterStore();
 
   final result = await fetchArticles(
     sourceUrl: kArticlesUrl,
@@ -53,6 +55,8 @@ Future<void> main() async {
     client: client,
     cache: cache,
     filterStore: filterStore,
+    sourceFilterStore: sourceFilterStore,
+    languageFilterStore: languageFilterStore,
   ));
 }
 
@@ -64,6 +68,8 @@ class NewsHeadApp extends StatelessWidget {
   final http.Client client;
   final ArticleCache cache;
   final CategoryFilterStore filterStore;
+  final SourceFilterStore sourceFilterStore;
+  final LanguageFilterStore languageFilterStore;
 
   const NewsHeadApp({
     super.key,
@@ -74,6 +80,8 @@ class NewsHeadApp extends StatelessWidget {
     required this.client,
     required this.cache,
     required this.filterStore,
+    required this.sourceFilterStore,
+    required this.languageFilterStore,
   });
 
   @override
@@ -89,6 +97,8 @@ class NewsHeadApp extends StatelessWidget {
         client: client,
         cache: cache,
         filterStore: filterStore,
+        sourceFilterStore: sourceFilterStore,
+        languageFilterStore: languageFilterStore,
       ),
     );
   }

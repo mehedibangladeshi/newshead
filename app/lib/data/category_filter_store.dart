@@ -24,3 +24,50 @@ class SharedPreferencesCategoryFilterStore implements CategoryFilterStore {
     await prefs.setStringList(_kExcludedCategoryKeysPref, keys.toList());
   }
 }
+
+/// The reader's source filter choice, stored as the set of *excluded*
+/// source names — same "excluded, not checked" shape as CategoryFilterStore.
+abstract class SourceFilterStore {
+  Future<Set<String>> readExcludedKeys();
+  Future<void> writeExcludedKeys(Set<String> keys);
+}
+
+const _kExcludedSourceKeysPref = 'excluded_source_keys';
+
+class SharedPreferencesSourceFilterStore implements SourceFilterStore {
+  @override
+  Future<Set<String>> readExcludedKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_kExcludedSourceKeysPref) ?? const []).toSet();
+  }
+
+  @override
+  Future<void> writeExcludedKeys(Set<String> keys) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kExcludedSourceKeysPref, keys.toList());
+  }
+}
+
+/// The reader's language filter choice, stored as the set of *excluded*
+/// language codes ('en'/'bn') — same "excluded, not checked" shape as
+/// CategoryFilterStore.
+abstract class LanguageFilterStore {
+  Future<Set<String>> readExcludedKeys();
+  Future<void> writeExcludedKeys(Set<String> keys);
+}
+
+const _kExcludedLanguageKeysPref = 'excluded_language_keys';
+
+class SharedPreferencesLanguageFilterStore implements LanguageFilterStore {
+  @override
+  Future<Set<String>> readExcludedKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_kExcludedLanguageKeysPref) ?? const []).toSet();
+  }
+
+  @override
+  Future<void> writeExcludedKeys(Set<String> keys) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kExcludedLanguageKeysPref, keys.toList());
+  }
+}

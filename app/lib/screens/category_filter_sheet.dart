@@ -3,16 +3,34 @@ import 'package:flutter/material.dart';
 import '../models/app_category.dart';
 import '../theme/app_theme.dart';
 
-/// Opens the category filter as a modal bottom sheet. Always lists every
-/// fetched category (not just the currently-visible ones) — see this
-/// feature's plan for why: it's a stable settings surface, not a live
-/// view, and a category with zero stories today can still be pre-picked
-/// for whenever it next has one.
+/// Maps a stored language code to its display label. UI-layer concern only —
+/// the data layer (category_visibility.dart) deals in raw codes.
+String languageLabel(String code) {
+  switch (code) {
+    case 'bn':
+      return 'Bangla';
+    case 'en':
+    default:
+      return 'English';
+  }
+}
+
+/// Opens the combined category/source/language filter as a modal bottom
+/// sheet. Always lists every fetched category/source/language (not just the
+/// currently-visible ones) — see this feature's plan for why: it's a stable
+/// settings surface, not a live view, and an item with zero stories today
+/// can still be pre-picked for whenever it next has one.
 Future<void> showCategoryFilterSheet({
   required BuildContext context,
   required List<AppCategory> allCategories,
   required Set<String> excludedKeys,
   required void Function(String categoryKey, bool isChecked) onToggle,
+  required List<String> allSources,
+  required Set<String> excludedSourceKeys,
+  required void Function(String sourceKey, bool isChecked) onSourceToggle,
+  required List<String> allLanguages,
+  required Set<String> excludedLanguageKeys,
+  required void Function(String languageKey, bool isChecked) onLanguageToggle,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -24,6 +42,12 @@ Future<void> showCategoryFilterSheet({
       allCategories: allCategories,
       excludedKeys: excludedKeys,
       onToggle: onToggle,
+      allSources: allSources,
+      excludedSourceKeys: excludedSourceKeys,
+      onSourceToggle: onSourceToggle,
+      allLanguages: allLanguages,
+      excludedLanguageKeys: excludedLanguageKeys,
+      onLanguageToggle: onLanguageToggle,
     ),
   );
 }
@@ -32,12 +56,24 @@ class CategoryFilterSheet extends StatefulWidget {
   final List<AppCategory> allCategories;
   final Set<String> excludedKeys;
   final void Function(String categoryKey, bool isChecked) onToggle;
+  final List<String> allSources;
+  final Set<String> excludedSourceKeys;
+  final void Function(String sourceKey, bool isChecked) onSourceToggle;
+  final List<String> allLanguages;
+  final Set<String> excludedLanguageKeys;
+  final void Function(String languageKey, bool isChecked) onLanguageToggle;
 
   const CategoryFilterSheet({
     super.key,
     required this.allCategories,
     required this.excludedKeys,
     required this.onToggle,
+    required this.allSources,
+    required this.excludedSourceKeys,
+    required this.onSourceToggle,
+    required this.allLanguages,
+    required this.excludedLanguageKeys,
+    required this.onLanguageToggle,
   });
 
   @override
@@ -46,11 +82,15 @@ class CategoryFilterSheet extends StatefulWidget {
 
 class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
   late Set<String> _excludedKeys;
+  late Set<String> _excludedSourceKeys;
+  late Set<String> _excludedLanguageKeys;
 
   @override
   void initState() {
     super.initState();
     _excludedKeys = {...widget.excludedKeys};
+    _excludedSourceKeys = {...widget.excludedSourceKeys};
+    _excludedLanguageKeys = {...widget.excludedLanguageKeys};
   }
 
   @override
@@ -80,39 +120,120 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
             ),
             const SizedBox(height: 4),
             const Text(
-              "Unchecked categories are hidden right away. Your picks stay put next time you open the app.",
+              "Unchecked items are hidden right away. Your picks stay put next time you open the app.",
               style: TextStyle(color: AppColors.textTertiary, fontSize: 11.5),
             ),
             const SizedBox(height: 10),
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  for (final category in widget.allCategories)
-                    CheckboxListTile(
-                      value: !_excludedKeys.contains(category.key),
-                      title: Text(category.label, style: const TextStyle(color: AppColors.textPrimary)),
-                      activeColor: AppColors.accent,
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      onChanged: (checked) {
-                        final isChecked = checked ?? true;
-                        setState(() {
-                          if (isChecked) {
-                            _excludedKeys.remove(category.key);
-                          } else {
-                            _excludedKeys.add(category.key);
-                          }
-                        });
-                        widget.onToggle(category.key, isChecked);
-                      },
-                    ),
+                  _FilterSection(
+                    label: 'Language',
+                    itemKeys: widget.allLanguages,
+                    itemLabels: {for (final l in widget.allLanguages) l: languageLabel(l)},
+                    excludedKeys: _excludedLanguageKeys,
+                    onToggle: (key, isChecked) {
+                      setState(() {
+                        if (isChecked) {
+                          _excludedLanguageKeys.remove(key);
+                        } else {
+                          _excludedLanguageKeys.add(key);
+                        }
+                      });
+                      widget.onLanguageToggle(key, isChecked);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _FilterSection(
+                    label: 'Categories',
+                    initiallyExpanded: true,
+                    itemKeys: [for (final c in widget.allCategories) c.key],
+                    itemLabels: {for (final c in widget.allCategories) c.key: c.label},
+                    excludedKeys: _excludedKeys,
+                    onToggle: (key, isChecked) {
+                      setState(() {
+                        if (isChecked) {
+                          _excludedKeys.remove(key);
+                        } else {
+                          _excludedKeys.add(key);
+                        }
+                      });
+                      widget.onToggle(key, isChecked);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _FilterSection(
+                    label: 'Sources',
+                    itemKeys: widget.allSources,
+                    itemLabels: {for (final s in widget.allSources) s: s},
+                    excludedKeys: _excludedSourceKeys,
+                    onToggle: (key, isChecked) {
+                      setState(() {
+                        if (isChecked) {
+                          _excludedSourceKeys.remove(key);
+                        } else {
+                          _excludedSourceKeys.add(key);
+                        }
+                      });
+                      widget.onSourceToggle(key, isChecked);
+                    },
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One collapsible checkbox-list section shared by the Categories/Sources/
+/// Language sections above. `itemKeys` is the stable identity used for
+/// exclusion tracking; `itemLabels` maps each key to its display text.
+class _FilterSection extends StatelessWidget {
+  final String label;
+  final bool initiallyExpanded;
+  final List<String> itemKeys;
+  final Map<String, String> itemLabels;
+  final Set<String> excludedKeys;
+  final void Function(String key, bool isChecked) onToggle;
+
+  const _FilterSection({
+    required this.label,
+    this.initiallyExpanded = false,
+    required this.itemKeys,
+    required this.itemLabels,
+    required this.excludedKeys,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (itemKeys.isEmpty) return const SizedBox.shrink();
+    return ExpansionTile(
+      initiallyExpanded: initiallyExpanded,
+      tilePadding: EdgeInsets.zero,
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      children: [
+        for (final key in itemKeys)
+          CheckboxListTile(
+            value: !excludedKeys.contains(key),
+            title: Text(itemLabels[key] ?? key, style: const TextStyle(color: AppColors.textPrimary)),
+            activeColor: AppColors.accent,
+            controlAffinity: ListTileControlAffinity.trailing,
+            onChanged: (checked) => onToggle(key, checked ?? true),
+          ),
+      ],
     );
   }
 }

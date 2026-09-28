@@ -16,6 +16,12 @@ void main() {
           allCategories: _categories,
           excludedKeys: const {'sports'},
           onToggle: (_, _) {},
+          allSources: const [],
+          excludedSourceKeys: const {},
+          onSourceToggle: (_, _) {},
+          allLanguages: const [],
+          excludedLanguageKeys: const {},
+          onLanguageToggle: (_, _) {},
         ),
       ),
     ));
@@ -42,6 +48,12 @@ void main() {
             toggledKey = key;
             toggledValue = isChecked;
           },
+          allSources: const [],
+          excludedSourceKeys: const {},
+          onSourceToggle: (_, _) {},
+          allLanguages: const [],
+          excludedLanguageKeys: const {},
+          onLanguageToggle: (_, _) {},
         ),
       ),
     ));
@@ -65,6 +77,12 @@ void main() {
             toggledKey = key;
             toggledValue = isChecked;
           },
+          allSources: const [],
+          excludedSourceKeys: const {},
+          onSourceToggle: (_, _) {},
+          allLanguages: const [],
+          excludedLanguageKeys: const {},
+          onLanguageToggle: (_, _) {},
         ),
       ),
     ));

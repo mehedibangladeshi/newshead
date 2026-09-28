@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from .. import config, english_date
+from ..timestamps import _DHAKAPOST_ABSOLUTE_RE
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -135,8 +136,13 @@ def parse_articles(html):
         img_tag = card.select_one("img[src]")
         # Listing cards carry the update time in a bare <span> right under
         # the headline (e.g. "16 November, 2024 10:44 am") - no id/class of
-        # its own, unlike the headline's <h1> or summary's <article>.
-        time_tag = card.select_one("span")
+        # its own, unlike the headline's <h1> or summary's <article>. A card
+        # can carry other bare <span>s before it, so pick the one whose text
+        # actually matches the timestamp shape rather than just the first.
+        time_tag = next(
+            (span for span in card.select("span") if _DHAKAPOST_ABSOLUTE_RE.search(_text(span))),
+            None,
+        )
 
         articles.append(
             {

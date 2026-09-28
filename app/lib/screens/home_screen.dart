@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../data/article_cache.dart';
 import '../data/article_repository.dart';
+import '../data/article_search.dart';
 import '../data/category_filter_store.dart';
 import '../data/category_visibility.dart';
 import '../models/app_category.dart';
@@ -20,6 +21,8 @@ class HomeScreen extends StatefulWidget {
   final http.Client client;
   final ArticleCache cache;
   final CategoryFilterStore filterStore;
+  final SourceFilterStore sourceFilterStore;
+  final LanguageFilterStore languageFilterStore;
 
   const HomeScreen({
     super.key,
@@ -30,6 +33,8 @@ class HomeScreen extends StatefulWidget {
     required this.client,
     required this.cache,
     required this.filterStore,
+    required this.sourceFilterStore,
+    required this.languageFilterStore,
   });
 
   @override
@@ -65,8 +70,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late List<NewsArticle> _articles;
   late List<AppCategory> _categories;
   Set<String> _excludedCategoryKeys = {};
+  Set<String> _excludedSourceKeys = {};
+  Set<String> _excludedLanguageKeys = {};
   late List<AppCategory> _visibleCategories;
   String? _lastRawBody;
+  bool _isSearching = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
   // Bumped on every successful refresh so each CategoryFeed remounts fresh
   // (fresh PageController at the first article) instead of keeping its old
   // scroll position over reordered/changed content.
@@ -85,12 +95,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     _initControllers(_visibleCategories.length);
     _loadExcludedCategoryKeys();
+    _loadExcludedSourceKeys();
+    _loadExcludedLanguageKeys();
   }
 
   Future<void> _loadExcludedCategoryKeys() async {
     final stored = await widget.filterStore.readExcludedKeys();
     if (!mounted) return;
     _applyExcludedKeys(stored);
+  }
+
+  Future<void> _loadExcludedSourceKeys() async {
+    final stored = await widget.sourceFilterStore.readExcludedKeys();
+    if (!mounted) return;
+    setState(() {
+      _excludedSourceKeys = stored;
+    });
+  }
+
+  Future<void> _loadExcludedLanguageKeys() async {
+    final stored = await widget.languageFilterStore.readExcludedKeys();
+    if (!mounted) return;
+    setState(() {
+      _excludedLanguageKeys = stored;
+    });
   }
 
   void _applyExcludedKeys(Set<String> excludedKeys) {
@@ -120,12 +148,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     widget.filterStore.writeExcludedKeys(next);
   }
 
+  void _handleSourceFilterToggle(String sourceKey, bool isChecked) {
+    final next = {..._excludedSourceKeys};
+    if (isChecked) {
+      next.remove(sourceKey);
+    } else {
+      next.add(sourceKey);
+    }
+    setState(() {
+      _excludedSourceKeys = next;
+    });
+    widget.sourceFilterStore.writeExcludedKeys(next);
+  }
+
+  void _handleLanguageFilterToggle(String languageKey, bool isChecked) {
+    final next = {..._excludedLanguageKeys};
+    if (isChecked) {
+      next.remove(languageKey);
+    } else {
+      next.add(languageKey);
+    }
+    setState(() {
+      _excludedLanguageKeys = next;
+    });
+    widget.languageFilterStore.writeExcludedKeys(next);
+  }
+
   void _openFilterSheet() {
     showCategoryFilterSheet(
       context: context,
       allCategories: _categories,
       excludedKeys: _excludedCategoryKeys,
       onToggle: _handleFilterToggle,
+      allSources: visibleSources(fetchedArticles: _articles, excludedKeys: const {}),
+      excludedSourceKeys: _excludedSourceKeys,
+      onSourceToggle: _handleSourceFilterToggle,
+      allLanguages: visibleLanguages(fetchedArticles: _articles, excludedKeys: const {}),
+      excludedLanguageKeys: _excludedLanguageKeys,
+      onLanguageToggle: _handleLanguageFilterToggle,
     );
   }
 
@@ -169,9 +229,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _openSearch() {
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
   @override
   void dispose() {
     _disposeControllers();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -285,49 +360,77 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const BrandMark(),
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: _openFilterSheet,
-                          icon: Stack(
-                            clipBehavior: Clip.none,
+                  children: _isSearching
+                      ? [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              decoration: const InputDecoration(
+                                hintText: 'Search articles',
+                                border: InputBorder.none,
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                });
+                              },
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _closeSearch,
+                            icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                          ),
+                        ]
+                      : [
+                          const BrandMark(),
+                          Row(
                             children: [
-                              const Icon(Icons.tune, color: AppColors.textSecondary),
-                              if (_excludedCategoryKeys.isNotEmpty)
-                                Positioned(
-                                  top: -2,
-                                  right: -2,
-                                  child: Container(
-                                    key: const Key('filterActiveBadge'),
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.accent,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
+                              IconButton(
+                                onPressed: _openSearch,
+                                icon: const Icon(Icons.search, color: AppColors.textSecondary),
+                              ),
+                              IconButton(
+                                onPressed: _openFilterSheet,
+                                icon: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    const Icon(Icons.tune, color: AppColors.textSecondary),
+                                    if (_excludedCategoryKeys.isNotEmpty ||
+                                        _excludedSourceKeys.isNotEmpty ||
+                                        _excludedLanguageKeys.isNotEmpty)
+                                      Positioned(
+                                        top: -2,
+                                        right: -2,
+                                        child: Container(
+                                          key: const Key('filterActiveBadge'),
+                                          width: 8,
+                                          height: 8,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.accent,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
+                              ),
+                              IconButton(
+                                onPressed: _isRefreshing ? null : _handleRefresh,
+                                icon: _isRefreshing
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      )
+                                    : const Icon(Icons.refresh, color: AppColors.textSecondary),
+                              ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          onPressed: _isRefreshing ? null : _handleRefresh,
-                          icon: _isRefreshing
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                )
-                              : const Icon(Icons.refresh, color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
                 ),
               ),
             ),
@@ -350,10 +453,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onPageChanged: _onCategoryPageChanged,
                     itemBuilder: (context, page) {
                       final category = _visibleCategories[page % _visibleCategories.length];
+                      final visibleSourceKeys = visibleSources(
+                        fetchedArticles: _articles,
+                        excludedKeys: _excludedSourceKeys,
+                      ).toSet();
+                      final visibleLanguageKeys = visibleLanguages(
+                        fetchedArticles: _articles,
+                        excludedKeys: _excludedLanguageKeys,
+                      ).toSet();
                       return CategoryFeed(
                         key: PageStorageKey('${category.key}#$_refreshGeneration'),
                         category: category.key,
-                        articles: articlesForCategory(_articles, category.key),
+                        articles: articlesForCategory(_articles, category.key)
+                            .where((a) => visibleSourceKeys.contains(a.source))
+                            .where((a) => visibleLanguageKeys.contains(a.language))
+                            .where((a) => matchesQuery(a, _searchQuery))
+                            .toList(),
                       );
                     },
                   ),

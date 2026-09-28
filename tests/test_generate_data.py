@@ -1,6 +1,9 @@
+import sys
+
 from scraper.generate_data import (
     classify_article_category,
     classify_category,
+    collect_source_articles,
     make_article_id,
     truncate_snippet,
     SECTION_CATEGORY_MAP,
@@ -224,3 +227,68 @@ def test_build_article_uses_run_started_at_to_anchor_dailystar_relative_time():
     item = {"url": "https://example.com/a", "headline": "H", "summary": "S", "listing_time": "2 hours ago"}
     article = build_article("dailystar", "The Daily Star", "main", item, "", anchor)
     assert article["publishedAt"] == "2026-08-23T12:00:00+06:00"
+
+
+class _FakeSourceModule:
+    """Minimal stand-in for a scraper.sources.* module, just enough for
+    collect_source_articles(): fixed sections, one item per section slug
+    (already carrying thumbnail+summary so enrich_item() never needs
+    fetch_article), and no real network calls."""
+
+    def __init__(self, sections):
+        self._sections = sections
+
+    def discover_sections(self):
+        return list(self._sections)
+
+    def get_cover_logo_url(self):
+        return ""
+
+    def list_articles(self, slug, edition_date):
+        return [
+            {
+                "url": f"https://example.com/{slug}",
+                "headline": f"Headline for {slug}",
+                "summary": "Summary",
+                "thumbnail": "https://example.com/thumb.jpg",
+                "listing_time": "",
+            }
+        ]
+
+
+def test_collect_source_articles_routes_ittefaqs_mapped_main_section_to_opinion(monkeypatch):
+    # Ittefaq's sections[0] "editorial" has an explicit SECTION_CATEGORY_MAP
+    # entry ("opinion") - the bug this fix addresses forced it to "main"
+    # instead, leaving that map entry dead. "national" (sections[1]) should
+    # keep resolving via the same map, unaffected.
+    monkeypatch.setitem(
+        sys.modules,
+        "scraper.sources.ittefaq",
+        _FakeSourceModule([("editorial", "Editorial"), ("national", "National")]),
+    )
+
+    articles = collect_source_articles("ittefaq", "2026-09-28", None)
+
+    by_slug = {a["articleUrl"].split("example.com/", 1)[-1]: a for a in articles}
+    assert by_slug["editorial"]["category"] == "opinion"
+    assert by_slug["national"]["category"] == SECTION_CATEGORY_MAP["ittefaq"]["national"]
+
+
+def test_collect_source_articles_still_forces_main_for_dhakatribunes_mapped_first_section(monkeypatch):
+    # Regression guard for the surprise found while cross-checking all 11
+    # sources: dhakatribune's sections[0] "bangladesh" ALSO has a
+    # SECTION_CATEGORY_MAP entry ("country"), same shape as ittefaq's
+    # "editorial" - but forcing it to "main" is intentional (dhakatribune's
+    # flagship section), so the fix must not generalize to it. Only Ittefaq
+    # is in SOURCES_WITH_MAPPED_MAIN_SECTION.
+    monkeypatch.setitem(
+        sys.modules,
+        "scraper.sources.dhakatribune",
+        _FakeSourceModule([("bangladesh", "Bangladesh"), ("sport/cricket", "Cricket")]),
+    )
+
+    articles = collect_source_articles("dhakatribune", "2026-09-28", None)
+
+    by_slug = {a["articleUrl"].split("example.com/", 1)[-1]: a for a in articles}
+    assert by_slug["bangladesh"]["category"] == "main"
+    assert by_slug["sport/cricket"]["category"] == "sports"

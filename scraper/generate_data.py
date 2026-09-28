@@ -442,6 +442,29 @@ SECTION_CATEGORY_MAP = {
 }
 
 
+# Sources whose sections[0] (normally forced to category "main" - see
+# collect_source_articles()) should instead flow through the normal
+# SECTION_CATEGORY_MAP/classify_article_category() path when that slug has
+# an explicit map entry. Currently only Ittefaq: its sections[0] is
+# "editorial" (the real front page, "home", is excluded from discovery -
+# see CORE_SECTION_SLUGS in scraper/sources/ittefaq.py), which already has
+# a SECTION_CATEGORY_MAP["ittefaq"]["editorial"] = "opinion" entry that was
+# dead code before this fix.
+#
+# NOT generalized to every source with a mapped first section, because two
+# other sources are structurally identical but intentionally different:
+# dhakatribune's sections[0] "bangladesh" (its flagship section, also
+# excluded-front-page-adjacent) has its own map entry ("country") that is
+# presently dead code too, but forcing it to "main" is the intended
+# behaviour, not a bug. dailystar/tbsnews/bdnews24 map *every* discovered
+# section slug by design (their sections[0] is whichever section happens to
+# be newest on a given run - see their SECTION_CATEGORY_MAP comments above),
+# so their sections[0] is always mapped; applying this generically would
+# silently delete their "main" category. Only add a source here after
+# confirming its situation is provably identical to Ittefaq's.
+SOURCES_WITH_MAPPED_MAIN_SECTION = {"ittefaq"}
+
+
 def classify_article_category(source_slug, section_slug, section_name, headline):
     """Resolve an article's canonical category: an explicit
     SECTION_CATEGORY_MAP entry for this source+section wins outright;
@@ -521,13 +544,24 @@ def collect_source_articles(source_slug, edition_date, run_started_at):
     articles = []
     seen_urls = set()
 
-    # First section is treated as this source's top/front listing -> "main".
+    # First section is treated as this source's top/front listing -> "main",
+    # unless it's one of SOURCES_WITH_MAPPED_MAIN_SECTION and has an
+    # explicit SECTION_CATEGORY_MAP entry, in which case it's classified
+    # like sections[1:] instead (see that set's comment above).
     main_slug, _main_name = sections[0]
-    try:
-        main_items = source_module.list_articles(main_slug, edition_date)
-    except Exception as exc:
-        logger.warning("Skipping %s section %s: %s", source_slug, main_slug, exc)
+    main_is_classified = (
+        source_slug in SOURCES_WITH_MAPPED_MAIN_SECTION
+        and SECTION_CATEGORY_MAP.get(source_slug, {}).get(main_slug) is not None
+    )
+
+    if main_is_classified:
         main_items = []
+    else:
+        try:
+            main_items = source_module.list_articles(main_slug, edition_date)
+        except Exception as exc:
+            logger.warning("Skipping %s section %s: %s", source_slug, main_slug, exc)
+            main_items = []
 
     for item in main_items:
         if not item.get("url") or item["url"] in seen_urls:
@@ -541,7 +575,8 @@ def collect_source_articles(source_slug, edition_date, run_started_at):
     # Remaining sections are classified into canonical categories via
     # SECTION_CATEGORY_MAP (explicit, wins outright) or, failing that,
     # keyword matching.
-    for slug, section_name in sections[1:]:
+    classify_sections = sections if main_is_classified else sections[1:]
+    for slug, section_name in classify_sections:
         try:
             items = source_module.list_articles(slug, edition_date)
         except Exception as exc:

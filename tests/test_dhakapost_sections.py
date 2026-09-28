@@ -58,6 +58,29 @@ def test_parse_articles_skips_cards_without_a_headline_link():
     assert parse_articles('<div class="n_post"><span>no headline here</span></div>') == []
 
 
+_LISTING_HTML_WITH_STRAY_SPAN = """
+<div class="col-md-12 p_left p_right n_post">
+  <div class="col-xs-4 p_left p_right">
+    <img alt="Electricity from Nepal" class="img-responsive" src="./assets/news_images/2024/11/16/mob/nepal-electricity.jpg">
+  </div>
+  <div class="col-xs-8">
+    <h1><a href="national/2024/11/16/2770">Electricity from Nepal to reach Bangladesh via Indian grid</a></h1>
+    <span>Sponsored</span>
+    <span>16 November, 2024 10:44 am</span>
+    <article class="hidden-xs hidden-sm">
+      <p>Electricity generated in Nepal will now reach Bangladesh via the Indian grid&#8230;</p>
+    </article>
+  </div>
+</div>
+"""
+
+
+def test_parse_articles_skips_a_stray_span_before_the_real_time_span():
+    articles = parse_articles(_LISTING_HTML_WITH_STRAY_SPAN)
+    assert len(articles) == 1
+    assert articles[0]["listing_time"] == "16 November, 2024 10:44 am"
+
+
 # Modeled on the real article-page DOM (Dhaka Post carries no ld+json
 # NewsArticle block, only Organization, so fetch_article hand-parses the
 # DOM instead of going through ld_json.select_by_type()).
