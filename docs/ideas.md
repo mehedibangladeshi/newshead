@@ -40,11 +40,12 @@ addition; Dhaka Post was in the confirmed-clean bucket. See
 
 **Confirmed not Cloudflare-blocked from a residential IP, not yet wired
 into the scraper** — candidates for a future source-addition pass, roughly
-in order of prominence: New Age (newagebd.net, EN), Financial Express
-(thefinancialexpress.com.bd, EN), Bangladesh Observer (observerbd.com, EN),
-BSS (bssnews.net, EN), Ajker Patrika (ajkerpatrika.com, BN), Daily Inqilab
-(dailyinqilab.com, BN), Bhorer Kagoj (bhorerkagoj.com, BN), Manab Zamin
-(mzamin.com, BN).
+in order of prominence: New Age (newagebd.net, EN), Bangladesh Observer
+(observerbd.com, EN), BSS (bssnews.net, EN), Ajker Patrika
+(ajkerpatrika.com, BN), Daily Inqilab (dailyinqilab.com, BN), Bhorer Kagoj
+(bhorerkagoj.com, BN), Manab Zamin (mzamin.com, BN). (Financial Express was
+in this bucket previously - see "2026-09-28 session" below, it's wired in
+now.)
 
 **Important caveat added 2026-08-24, after a real CI run:** "confirmed
 clean" above only means clean from a residential IP — it is *not* a
@@ -59,12 +60,14 @@ local curl test.
 both a residential IP and CI)** — don't attempt without a proxy/residential-
 IP strategy (bdnews24 and bdnews24 Bangla removed from this list — see
 "being added next" above, re-testing now that the residential runner is in
-place): Kaler Kantho (kalerkantho.com, BN), Bangladesh Pratidin
-(bd-pratidin.com, BN), Jagonews24 (jagonews24.com, BN), RisingBD
-(risingbd.com, BN), Daily Sun (daily-sun.com, EN), Banglanews24
-(banglanews24.com, BN). Same category as the already-known-blocked
-jugantor, dhakatribune, ittefaq, and (per the 2026-08-24 CI run)
-banglatribune and samakal.
+place): Bangladesh Pratidin (bd-pratidin.com, BN), Jagonews24
+(jagonews24.com, BN), RisingBD (risingbd.com, BN), Daily Sun (daily-sun.com,
+EN), Banglanews24 (banglanews24.com, BN). Same category as the
+already-known-blocked jugantor, dhakatribune, ittefaq, and (per the
+2026-08-24 CI run) banglatribune and samakal. (Kaler Kantho removed from
+this list — see "2026-09-28 session" below: it's wired in now via the
+`browser_client.py` Playwright fallback rather than a proxy, still flagged
+at-risk pending CI confirmation.)
 
 The Business Standard (tbsnews.net), Bangla Tribune (banglatribune.com),
 and Samakal (samakal.com) were picked from this same research pass and
@@ -84,3 +87,21 @@ proxy/unblocker-API strategy was researched and rejected for cost reasons
 (the pipeline's uncapped, non-incremental re-scraping would run
 ~$100+/month even after caching improvements) in favor of the residential
 runner.
+
+**2026-09-28 session — 6 new sources added:** thedissent.news, netra.news,
+dailywaadaa.com, Financial Express (today.thefinancialexpress.com.bd),
+Daily Kaler Kantho (kalerkantho.com), and Daily Naya Diganta
+(dailynayadiganta.com). thedissent.news and netra.news are fact-checking/
+investigative-journalism outlets rather than general newspapers, so a new
+18th canonical category, "Fact-Check" (`fact_check`), was added for their
+core content instead of forcing it into `miscellaneous`. netra.news and
+kalerkantho.com are both Cloudflare-protected with a JS challenge (not a
+plain IP-reputation block, confirmed live) - `scraper/browser_client.py`
+(added in a prior session for jugantor) now also backs these two, so no
+proxy strategy was needed after all for this class of block. Daily Naya
+Diganta currently serves an invalid/self-signed TLS certificate; its source
+module uses a locally-scoped `verify=False` session (not a global
+relaxation of `config.make_session()`). Both Cloudflare-protected additions
+(netra.news, kalerkantho.com) are unverified against the actual self-hosted
+CI runner as of this session - confirm with `gh workflow run scrape.yml`
+before trusting them long-term, per the caveat above.

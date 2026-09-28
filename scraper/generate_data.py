@@ -1,6 +1,6 @@
 """Generate a real-data JSON snapshot for the NewsHead app.
 
-Scrapes 11 Bengali/English newspaper sources, classifies articles into the
+Scrapes 17 Bengali/English news sources, classifies articles into the
 app's fixed category taxonomy, and writes articles.json at the repo root.
 Published to GitHub Pages by .github/workflows/scrape.yml, which runs this
 4x/day.
@@ -45,6 +45,7 @@ CATEGORY_DEFINITIONS = [
     ("religion", "Religion"),
     ("arts_literature", "Arts & Literature"),
     ("expat", "Expat/Probash"),
+    ("fact_check", "Fact-Check"),
     ("miscellaneous", "Miscellaneous"),
 ]
 
@@ -65,6 +66,12 @@ SOURCE_DISPLAY_NAMES = {
     "bdnews24": "bdnews24.com",
     "bdnews24bangla": "বিডিনিউজ টোয়েন্টিফোর বাংলা",
     "dhakapost": "The Dhaka Post",
+    "financialexpress": "The Financial Express",
+    "dailywaadaa": "Daily Waadaa",
+    "thedissent": "The Dissent",
+    "nayadiganta": "দৈনিক নয়া দিগন্ত",
+    "netranews": "Netra News",
+    "kalerkantho": "কালের কণ্ঠ",
 }
 
 # Per-source display language for formatting an article's publishedAt on
@@ -82,6 +89,12 @@ SOURCE_LANGUAGE = {
     "bdnews24": "en",
     "bdnews24bangla": "bn",
     "dhakapost": "en",
+    "financialexpress": "en",
+    "dailywaadaa": "en",
+    "thedissent": "en",
+    "nayadiganta": "bn",
+    "netranews": "en",
+    "kalerkantho": "bn",
 }
 
 # Bilingual (English + Bengali) keyword lists used to classify an article's
@@ -438,6 +451,115 @@ SECTION_CATEGORY_MAP = {
         "lifesyle": "lifestyle",  # site's own slug typo, not "lifestyle"
         "weird": "miscellaneous",
         "interview": "opinion",
+    },
+    "financialexpress": {
+        # sections[0] "first-page" is Main - the site's own genuine front
+        # page (unlike dhakatribune/ittefaq, no excluded-front-page
+        # carve-out needed here). "archive", "budget-*",
+        # "*-anniversary-issue-*", and "golden-jubilee-of-independence" are
+        # special/utility pages, pre-filtered by CORE_SECTION_SLUGS in
+        # scraper/sources/financialexpress.py and stay unmapped.
+        "last-page": "country",
+        "country": "country",
+        "editorial": "opinion",
+        "views-opinion": "opinion",
+        "views-reviews": "arts_literature",
+        "politics-policies": "politics",
+        "metro-news": "city",
+        "world": "world",
+        "sports": "sports",
+        "stock-corporate": "business",
+        "trade-market": "business",
+        "education-youth": "education",
+        "features-analysis": "lifestyle",
+        "lifestyle": "lifestyle",
+        "tech-express": "tech",
+    },
+    "dailywaadaa": {
+        # sections[0] is whichever section happens to have the first
+        # article on a given run (a Quintype homepage digest, same reasoning
+        # as dailystar's sections[0]) - "latest" is a rolling aggregator
+        # landing page, pre-filtered and stays unmapped.
+        "politics": "politics",
+        "world": "world",
+        "south-asia": "world",
+        "business": "business",
+        "economy": "business",
+        "banking": "business",
+        "the-trade-off": "business",
+        "cricket": "sports",
+        "football": "sports",
+        "sports": "sports",
+        "crime": "country",
+        "feature": "lifestyle",
+        "lifestyle": "lifestyle",
+        "long-read": "arts_literature",
+        "analysis": "opinion",
+        "opinion": "opinion",
+        "arts": "arts_literature",
+        "fact-check": "fact_check",
+        "bangladesh": "country",
+    },
+    "thedissent": {
+        # A fact-checking/media-watch outlet, not a general newspaper - see
+        # the "fact_check" category note above CATEGORY_DEFINITIONS. Only
+        # "current-affairs" and "opinions" fit the general taxonomy; the
+        # rest are this source's actual core output, routed to fact_check
+        # rather than miscellaneous (confirmed with user).
+        "current-affairs": "country",
+        "opinions": "opinion",
+        "fact-checks": "fact_check",
+        "media-watches": "fact_check",
+        "digital-investigations": "fact_check",
+        "disinformation-actors": "fact_check",
+    },
+    "nayadiganta": {
+        # sections[0] "national/2" is Main - forced-to-Main here, same
+        # treatment as dhakatribune's "bangladesh" (a real flagship section,
+        # not an excluded-front-page carve-out candidate).
+        "politics/19": "politics",
+        "international/3": "world",
+        "country/4": "country",
+        "sports/6": "sports",
+        "finance-n-commerce/13": "business",
+        "entertainment/7": "entertainment",
+        "religion/27": "religion",
+    },
+    "netranews": {
+        # An investigative-journalism outlet like thedissent.news - most of
+        # its content is fact_check by design, not a fallback for oddball
+        # sections. No section here is a clean "Main" candidate (confirmed
+        # with user's earlier fact_check decision extends to this source);
+        # sections[0] is left forced-to-Main since there's no evidence
+        # that's wrong for it, same as every source without an opt-in in
+        # SOURCES_WITH_MAPPED_MAIN_SECTION below.
+        "netra-report": "fact_check",
+        "netra-analysis": "fact_check",
+        "interactive": "fact_check",
+        "interview": "fact_check",
+        "feature-photo-story": "lifestyle",
+        "opinion": "opinion",
+    },
+    "kalerkantho": {
+        # sections[0] "national" is Main - a real flagship section, forced-
+        # to-Main like dhakatribune's "bangladesh". "Islamic-lifestylie"'s
+        # slug/label mismatch is the live site's own inconsistency (slug
+        # says Islamic, nav label reads "online") - kept as "religion"
+        # since the slug is the more specific signal; revisit if a real
+        # section audit shows otherwise.
+        "country-news": "country",
+        "dhaka": "city",
+        "chattogram": "city",
+        "Politics": "politics",
+        "Court": "country",
+        "campus-online": "education",
+        "world": "world",
+        "sport": "sports",
+        "entertainment": "entertainment",
+        "business": "business",
+        "Islamic-lifestylie": "religion",
+        "lifestyle": "lifestyle",
+        "shuvosangho": "miscellaneous",
     },
 }
 

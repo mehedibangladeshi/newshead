@@ -49,7 +49,7 @@ def _shutdown():
         _playwright = None
 
 
-def get_html(url, timeout_ms=30000):
+def get_html(url, timeout_ms=30000, extra_wait_ms=0):
     browser = _ensure_browser()
     page = browser.new_page(user_agent=config.USER_AGENT)
     try:
@@ -57,6 +57,15 @@ def get_html(url, timeout_ms=30000):
         # polling); "domcontentloaded" is enough since these are
         # server-rendered pages, not client-side-rendered SPAs.
         page.goto(url, timeout=timeout_ms, wait_until="domcontentloaded")
+        # kalerkantho.com's /online/<section> listing pages are the
+        # exception: confirmed live to render an empty shell at
+        # domcontentloaded and fetch their actual story cards client-side
+        # afterwards (its own article pages don't have this problem - only
+        # listing pages do). extra_wait_ms lets a source opt into a fixed
+        # settle delay for cases like this instead of every source paying
+        # for it.
+        if extra_wait_ms:
+            page.wait_for_timeout(extra_wait_ms)
         return page.content()
     finally:
         page.close()

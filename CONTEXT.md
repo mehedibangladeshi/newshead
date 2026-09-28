@@ -1,6 +1,6 @@
 # NewsHead
 
-A Python scraper pipeline that publishes a JSON snapshot of news articles from 5 Bengali/English newspapers, and a Flutter app that renders it as a swipeable, reels-style feed split by category.
+A Python scraper pipeline that publishes a JSON snapshot of news articles from 17 Bengali/English news sources, and a Flutter app that renders it as a swipeable, reels-style feed split by category.
 
 ## Language
 

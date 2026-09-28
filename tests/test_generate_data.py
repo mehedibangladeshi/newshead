@@ -124,8 +124,8 @@ def test_build_output_includes_the_given_articles():
     assert output["articles"] == articles
 
 
-def test_category_definitions_has_16_categories_plus_main():
-    assert len(CATEGORY_DEFINITIONS) == 17
+def test_category_definitions_has_17_categories_plus_main():
+    assert len(CATEGORY_DEFINITIONS) == 18
     assert CATEGORY_DEFINITIONS[0] == ("main", "Main")
 
 

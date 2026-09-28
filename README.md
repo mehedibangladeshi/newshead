@@ -1,8 +1,8 @@
 # NewsHead
 
-A self-scraping news app: a Python pipeline scrapes 11 Bengali/English
-newspapers 4x/day, classifies articles into a 17-category taxonomy (16 topics plus a
-per-source Main), tags each with a publish timestamp and language, and
+A self-scraping news app: a Python pipeline scrapes 17 Bengali/English news
+sources 4x/day, classifies articles into an 18-category taxonomy (17 topics
+plus a per-source Main), tags each with a publish timestamp and language, and
 publishes the result to GitHub Pages. The Flutter app fetches that JSON at
 launch and presents it as a reels-style (TikTok/Instagram-like) vertical,
 swipeable card feed that loops seamlessly in both directions — never a dead
@@ -23,15 +23,23 @@ python3 -m venv .venv
 8 PM Asia/Dhaka) and publishes `articles.json` to the `gh-pages` branch, served at
 `https://mehedibangladeshi.github.io/newshead/articles.json`.
 
-5 of the 11 sources (jugantor, dhakatribune, ittefaq, banglatribune, samakal)
+5 of the sources (jugantor, dhakatribune, ittefaq, banglatribune, samakal)
 are Cloudflare-blocked from GitHub-hosted runner IPs (bot protection keyed on
 IP reputation — see `docs/test-plan.md` §2). To fix this without a recurring
 proxy-service cost, the scrape job runs Dockerized (`Dockerfile` at the repo
 root) on a self-hosted GitHub Actions runner on a residential IP — see
 `docs/runner-setup-cachyos.md` for how it's set up. `scrape-fallback.yml`
 covers the case where that runner is offline, re-running on a GitHub-hosted
-runner 2 hours later (only the 3 already-CI-clean sources succeed there, but
+runner 2 hours later (only the already-CI-clean sources succeed there, but
 it keeps the feed from going fully stale).
+
+netranews and kalerkantho are Cloudflare-protected with a JS challenge
+rather than a plain IP-reputation block, so a residential IP alone doesn't
+help - `scraper/browser_client.py` gives their source modules a headless-
+Chromium (Playwright) fallback for when a plain `requests` fetch fails
+(the same pattern jugantor.py already used before the runner moved to a
+residential IP). The Docker image installs Playwright + Chromium for this;
+running the scraper outside Docker needs `playwright install chromium` once.
 
 Use `scripts/discover_sections.py` to audit each source's full raw navigation
 (bypassing the per-source discovery allowlists) when auditing or redesigning
@@ -42,14 +50,13 @@ the category taxonomy later.
 `articles.json` has three top-level keys:
 
 - `generated_at` — the run's edition date (`YYYY-MM-DD`).
-- `categories` — the full 17-entry taxonomy in display order, each
+- `categories` — the full 18-entry taxonomy in display order, each
   `{"key": ..., "label": ...}`, `main` first.
 - `articles` — one object per article:
   - `id`, `category`, `source`, `headline`, `snippet`, `imageUrl`, `articleUrl`
     — always present.
-  - `language` — `"bn"` or `"en"`, set per-source
-    (jugantor/prothomalo/ittefaq/banglatribune/samakal are Bengali;
-    dhakatribune/dailystar/tbsnews are English).
+  - `language` — `"bn"` or `"en"`, set per-source (see `SOURCE_LANGUAGE` in
+    `scraper/generate_data.py` for the current full split).
   - `publishedAt` — an ISO-8601 datetime with a UTC offset, or `null` when the
     source's own listing gave no parseable signal. dailystar's and tbsnews's
     are both approximate (parsed from a relative phrase like "5 HOUR(s)" or

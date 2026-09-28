@@ -156,3 +156,60 @@ def test_parse_published_at_samakal_bengali_24h():
 def test_parse_published_at_samakal_returns_none_for_unrecognized_text():
     assert parse_published_at("samakal", "unknown format", None) is None
     assert parse_published_at("samakal", "", None) is None
+
+
+def test_parse_published_at_dailywaadaa_iso_offset():
+    result = parse_published_at("dailywaadaa", "2026-09-28T05:18:50.167Z", None)
+    parsed = datetime.fromisoformat(result)
+    assert (parsed.year, parsed.month, parsed.day, parsed.hour, parsed.minute) == (
+        2026,
+        9,
+        28,
+        5,
+        18,
+    )
+
+
+def test_parse_published_at_thedissent_date_only():
+    assert parse_published_at("thedissent", "24 September 2026", None) == "2026-09-24T00:00:00+06:00"
+
+
+def test_parse_published_at_thedissent_returns_none_for_unrecognized_text():
+    assert parse_published_at("thedissent", "unknown format", None) is None
+    assert parse_published_at("thedissent", "", None) is None
+
+
+def test_parse_published_at_nayadiganta_bengali_relative_combined_units():
+    anchor = datetime(2026, 9, 28, 12, 0, tzinfo=DHAKA_TZ)
+    result = parse_published_at("nayadiganta", "১ ঘণ্টা ২১ মিনিট আগে", anchor)
+    assert result == "2026-09-28T10:39:00+06:00"
+
+
+def test_parse_published_at_nayadiganta_bengali_relative_single_unit():
+    anchor = datetime(2026, 9, 28, 12, 0, tzinfo=DHAKA_TZ)
+    assert parse_published_at("nayadiganta", "৫১ মিনিট আগে", anchor) == "2026-09-28T11:09:00+06:00"
+
+
+def test_parse_published_at_nayadiganta_returns_none_without_an_anchor():
+    assert parse_published_at("nayadiganta", "৫১ মিনিট আগে", None) is None
+
+
+def test_parse_published_at_kalerkantho_bengali_24h_comma_after_month():
+    result = parse_published_at("kalerkantho", "২৮ সেপ্টেম্বর, ২০২৬ ১৪:২৪", None)
+    parsed = datetime.fromisoformat(result)
+    assert (parsed.year, parsed.month, parsed.day, parsed.hour, parsed.minute) == (
+        2026,
+        9,
+        28,
+        14,
+        24,
+    )
+
+
+def test_parse_published_at_kalerkantho_returns_none_for_unrecognized_text():
+    assert parse_published_at("kalerkantho", "unknown format", None) is None
+
+
+def test_parse_published_at_netranews_date_only_iso():
+    result = parse_published_at("netranews", "2026-09-27", None)
+    assert result == "2026-09-27T00:00:00+06:00"

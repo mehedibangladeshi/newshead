@@ -90,16 +90,54 @@ _DHAKAPOST_ABSOLUTE_RE = re.compile(
     r"(?P<hour>\d{1,2}):(?P<minute>\d{2})\s*(?P<ampm>[AaPp][Mm])"
 )
 
+# thedissent.news's listing cards show a date-only English string with no
+# time component at all, e.g. "24 September 2026" - confirmed live.
+_ENGLISH_DATE_ONLY_RE = re.compile(
+    r"^(?P<day>\d{1,2})\s+(?P<month>[A-Za-z]+)\s+(?P<year>\d{4})$"
+)
+
+# nayadiganta.com's and kalerkantho.com's listing/article pages both use a
+# Bengali absolute datetime, 24-hour, no AM/PM marker - but disagree on
+# where the comma goes ("<day> <month> <year>, <hour>:<minute>" vs.
+# "<day> <month>, <year> <hour>:<minute>", both confirmed live), so this
+# regex tolerates a comma after either the month or the year (or neither),
+# and optional whitespace around the hour:minute colon (nayadiganta's own
+# article-page format was seen with a stray space there).
+_BENGALI_ABSOLUTE_24H_FLEXIBLE_RE = re.compile(
+    r"(?P<day>[০-৯]{1,2})\s+(?P<month>[^\s,]+),?\s+(?P<year>[০-৯]{4}),?\s*"
+    r"(?P<hour>[০-৯]{1,2})\s*:\s*(?P<minute>[০-৯]{2})"
+)
+
+# nayadiganta.com's listing cards show a Bengali relative phrase, combining
+# up to two units, e.g. "১ ঘণ্টা ২১ মিনিট আগে" ("1 hour 21 minutes ago") or
+# a single unit alone, e.g. "৫১ মিনিট আগে" ("51 minutes ago") - confirmed
+# live.
+_BENGALI_RELATIVE_UNIT_RE = re.compile(r"([০-৯]+)\s*(ঘণ্টা|মিনিট|দিন|সেকেন্ড|সপ্তাহ|মাস|বছর)")
+
+_BENGALI_UNIT_SECONDS = {
+    "সেকেন্ড": 1,
+    "মিনিট": 60,
+    "ঘণ্টা": 3600,
+    "দিন": 86400,
+    "সপ্তাহ": 604800,
+    "মাস": 2592000,
+    "বছর": 31536000,
+}
+
 
 def _parse_iso_offset(raw):
-    """dhakatribune / ittefaq: an ISO-8601 string with a UTC offset already
-    attached, e.g. "2026-08-23T12:58:59+06:00"."""
+    """dhakatribune / ittefaq / dailywaadaa: an ISO-8601 string with a UTC
+    offset already attached, e.g. "2026-08-23T12:58:59+06:00". netranews's
+    date-only ISO strings (e.g. "2026-09-27", no time or offset at all) are
+    also routed through this parser - fromisoformat leaves those naive, so
+    they're localized to Dhaka time rather than left ambiguous."""
     if not raw or not isinstance(raw, str):
         return None
     try:
-        return datetime.fromisoformat(raw)
+        result = datetime.fromisoformat(raw)
     except ValueError:
         return None
+    return result if result.tzinfo is not None else result.replace(tzinfo=DHAKA_TZ)
 
 
 def _parse_epoch_ms(raw):
@@ -257,6 +295,65 @@ def _parse_dhakapost_absolute(raw):
         return None
 
 
+def _parse_english_date_only(raw):
+    """thedissent.news: a date-only English string with no time, e.g.
+    "24 September 2026" - the result is midnight Dhaka time, the best
+    precision this source's listing actually offers."""
+    if not raw or not isinstance(raw, str):
+        return None
+    match = _ENGLISH_DATE_ONLY_RE.match(raw.strip())
+    if not match:
+        return None
+    try:
+        month = datetime.strptime(match.group("month")[:3], "%b").month
+    except ValueError:
+        return None
+    day = int(match.group("day"))
+    year = int(match.group("year"))
+    try:
+        return datetime(year, month, day, tzinfo=DHAKA_TZ)
+    except ValueError:
+        return None
+
+
+def _parse_bengali_absolute_24h_flexible(raw):
+    """nayadiganta / kalerkantho: a Bengali absolute datetime, 24-hour, no
+    AM/PM marker, comma placement varying by page - see
+    _BENGALI_ABSOLUTE_24H_FLEXIBLE_RE."""
+    if not raw or not isinstance(raw, str):
+        return None
+    match = _BENGALI_ABSOLUTE_24H_FLEXIBLE_RE.search(raw)
+    if not match:
+        return None
+    month = _BN_MONTH_TO_NUM.get(match.group("month"))
+    if month is None:
+        return None
+    day = int(match.group("day").translate(_BN_TO_ASCII_DIGITS))
+    year = int(match.group("year").translate(_BN_TO_ASCII_DIGITS))
+    hour = int(match.group("hour").translate(_BN_TO_ASCII_DIGITS))
+    minute = int(match.group("minute").translate(_BN_TO_ASCII_DIGITS))
+    try:
+        return datetime(year, month, day, hour, minute, tzinfo=DHAKA_TZ)
+    except ValueError:
+        return None
+
+
+def _parse_bengali_relative(raw, anchor):
+    """nayadiganta: a Bengali relative phrase off the listing card's own
+    "ago" text, e.g. "১ ঘণ্টা ২১ মিনিট আগে". anchor is the scrape run's own
+    start time - the result is necessarily approximate, rounded to
+    whatever granularity the site's own listing already used."""
+    if not raw or not isinstance(raw, str) or anchor is None:
+        return None
+    matches = _BENGALI_RELATIVE_UNIT_RE.findall(raw)
+    if not matches:
+        return None
+    total_seconds = 0
+    for n, unit in matches:
+        total_seconds += int(n.translate(_BN_TO_ASCII_DIGITS)) * _BENGALI_UNIT_SECONDS[unit]
+    return anchor - timedelta(seconds=total_seconds)
+
+
 _SOURCE_PARSERS = {
     "dhakatribune": lambda raw, anchor: _parse_iso_offset(raw),
     "ittefaq": lambda raw, anchor: _parse_iso_offset(raw),
@@ -268,9 +365,14 @@ _SOURCE_PARSERS = {
     "samakal": lambda raw, anchor: _parse_bengali_absolute_24h(raw),
     "bdnews24": lambda raw, anchor: _parse_bdnews24_published(raw),
     "dhakapost": lambda raw, anchor: _parse_dhakapost_absolute(raw),
-    # bdnews24bangla's listing cards carry no time signal at all (confirmed
-    # live: always an empty string) - left unregistered, which already
-    # returns None safely via the .get() below.
+    "dailywaadaa": lambda raw, anchor: _parse_iso_offset(raw),
+    "thedissent": lambda raw, anchor: _parse_english_date_only(raw),
+    "nayadiganta": lambda raw, anchor: _parse_bengali_relative(raw, anchor),
+    "kalerkantho": lambda raw, anchor: _parse_bengali_absolute_24h_flexible(raw),
+    "netranews": lambda raw, anchor: _parse_iso_offset(raw),
+    # bdnews24bangla's and financialexpress's listing cards carry no time
+    # signal at all (confirmed live: always an empty string) - left
+    # unregistered, which already returns None safely via the .get() below.
 }
 
 

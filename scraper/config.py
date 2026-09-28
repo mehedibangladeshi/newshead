@@ -28,6 +28,12 @@ SOURCES = [
     "bdnews24",
     "bdnews24bangla",
     "dhakapost",
+    "financialexpress",
+    "dailywaadaa",
+    "thedissent",
+    "nayadiganta",
+    "netranews",
+    "kalerkantho",
 ]
 
 
