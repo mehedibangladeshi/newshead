@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, config
+from .. import config
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.dailynayadiganta.com"
 COVER_LOGO_URL = f"{BASE_URL}/assets/img/logo.png"
-COVER_ACCENT_COLOR = (176, 30, 36)  # a representative Bangladeshi-daily masthead red; no brand color found on the live page
 
 SOURCE_NAME = "দৈনিক নয়া দিগন্ত"
 
@@ -144,8 +143,6 @@ def parse_article(html, url):
     soup = BeautifulSoup(html, "html.parser")
 
     headline_tag = soup.select_one("h1.entry-title")
-    byline_tag = soup.select_one(".pd-byline-left span")
-    time_tag = soup.select_one(".pd-byline-row time")
     body_container = soup.select_one("article.pd-body")
     image_tag = soup.select_one('meta[property="og:image"]')
 
@@ -159,8 +156,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _text(headline_tag),
-        "author": _normalize(_text(byline_tag)),
-        "date_published": _text(time_tag),
         "image_url": (image_tag.get("content") or "") if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -175,5 +170,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)

@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from .. import browser_client, config, english_date
+from .. import browser_client, config
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://netra.news"
 COVER_LOGO_URL = "https://netra.news/content/images/2026/04/netra-news-logooooo.svg"
-COVER_ACCENT_COLOR = (0, 0, 0)  # Ghost theme masthead is plain black-on-white, like thedissent.news
 
 SOURCE_NAME = "Netra News"
 
@@ -117,8 +116,6 @@ def parse_article(html, url):
 
     article = soup.select_one("article") or soup
     headline_tag = article.select_one("h1")
-    author_tag = article.select_one("a.ntr-article-author-name")
-    time_tag = article.select_one("time.ntr-article-date")
     body_container = article.select_one("section.gh-content")
     image_tag = soup.select_one('meta[property="og:image"]')
 
@@ -132,8 +129,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _text(headline_tag),
-        "author": _normalize(_text(author_tag)),
-        "date_published": time_tag.get("datetime", "") if time_tag else "",
         "image_url": (image_tag.get("content") or "") if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -148,5 +143,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

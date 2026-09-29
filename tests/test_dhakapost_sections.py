@@ -107,8 +107,6 @@ def test_parse_article_reads_headline_author_date_image_and_paragraphs():
     article = parse_article(_ARTICLE_HTML, "https://www.thedhakapost.com/national/2024/11/16/2770")
     assert article["url"] == "https://www.thedhakapost.com/national/2024/11/16/2770"
     assert article["headline"] == "Electricity from Nepal to reach Bangladesh via Indian grid"
-    assert article["author"] == "UNB"
-    assert article["date_published"] == "16 November, 2024 10:44 am"
     assert article["image_url"] == "https://www.thedhakapost.com/assets/news_images/2024/11/16/nepal-electricity.jpg"
     assert article["paragraphs"] == [
         "Electricity generated in Nepal will now reach Bangladesh via the Indian grid.",

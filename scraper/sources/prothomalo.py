@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, config
+from .. import config
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -21,17 +21,6 @@ COVER_LOGO_URL = (
     "https://media.prothomalo.com/prothomalo-bangla/2021-01/"
     "1d75151c-eff9-4e9f-ac28-aebc4618d00f/palo_bangla_og.png"
 )
-COVER_ACCENT_COLOR = (238, 65, 35)  # prothomalo.com's sun-mark red-orange, #ee4123
-
-# The og:image asset above is the only non-SVG masthead asset available (see
-# COVER_LOGO_URL), but it's a 1200x630 banner with a near-white background,
-# a subtitle line ("prothomalo.com") and an oversized sun-circle graphic -
-# not a tightly-cropped wordmark like Jugantor's. These crop it down to just
-# the wordmark + small sun accent, matching that tighter style.
-LOGO_CROP_BOX = (450, 270, 1170, 445)
-LOGO_BACKGROUND_RGB = (245, 245, 245)
-LOGO_BACKGROUND_TOLERANCE = 12
-
 SOURCE_NAME = "প্রথম আলো"
 
 # Prothom Alo is Bangladesh's paper, so "today" for date-filtering purposes
@@ -228,20 +217,6 @@ def list_articles(slug, edition_date):
     return parse_articles(html, edition_date)
 
 
-def _extract_author(author_field):
-    # Prothom Alo's ld+json represents author as a list of Person dicts,
-    # unlike Jugantor's single dict/string - take the first entry, then
-    # apply the same dict/string branching as Jugantor.
-    if isinstance(author_field, list):
-        author_field = author_field[0] if author_field else None
-
-    if isinstance(author_field, dict):
-        return author_field.get("name") or ""
-    if isinstance(author_field, str):
-        return author_field
-    return ""
-
-
 def parse_article(html, url):
     """Pure parsing step for fetch_article; takes raw article-page HTML
     and the article's URL, returns the article detail dict."""
@@ -259,8 +234,6 @@ def parse_article(html, url):
         if text:
             paragraphs.append(text)
 
-    author = _extract_author(metadata.get("author"))
-
     image_url = ""
     image_field = metadata.get("image")
     if isinstance(image_field, dict):
@@ -271,8 +244,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join((metadata.get("headline") or "").split())),
-        "author": _normalize(" ".join(author.split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -287,25 +258,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)
-
-
-def prepare_logo_image(image):
-    """Crop the fetched og:image masthead down to just the wordmark + small
-    sun accent (see LOGO_CROP_BOX), and make its near-white background
-    transparent so it composites cleanly onto the cover - cover.render_cover
-    calls this on the fetched logo before compositing."""
-    cropped = image.convert("RGBA").crop(LOGO_CROP_BOX)
-    pixels = cropped.load()
-    width, height = cropped.size
-    bg_r, bg_g, bg_b = LOGO_BACKGROUND_RGB
-    tolerance = LOGO_BACKGROUND_TOLERANCE
-
-    for y in range(height):
-        for x in range(width):
-            r, g, b, a = pixels[x, y]
-            if abs(r - bg_r) <= tolerance and abs(g - bg_g) <= tolerance and abs(b - bg_b) <= tolerance:
-                pixels[x, y] = (r, g, b, 0)
-
-    return cropped

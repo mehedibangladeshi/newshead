@@ -5,8 +5,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
-from ..timestamps import _DHAKAPOST_ABSOLUTE_RE
+from .. import config
+from ..timestamps import DHAKAPOST_ABSOLUTE_RE
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -21,7 +21,6 @@ BASE_URL = "https://www.thedhakapost.com"
 # separate en.thedhakapost.com subdomain (DNS doesn't resolve) and
 # /english / /en both 500.
 COVER_LOGO_URL = "https://www.thedhakapost.com/assets/importent_images/logo.jpg"
-COVER_ACCENT_COLOR = (176, 20, 34)  # sampled from the logo's red wordmark
 
 SOURCE_NAME = "The Dhaka Post"
 
@@ -140,7 +139,7 @@ def parse_articles(html):
         # can carry other bare <span>s before it, so pick the one whose text
         # actually matches the timestamp shape rather than just the first.
         time_tag = next(
-            (span for span in card.select("span") if _DHAKAPOST_ABSOLUTE_RE.search(_text(span))),
+            (span for span in card.select("span") if DHAKAPOST_ABSOLUTE_RE.search(_text(span))),
             None,
         )
 
@@ -175,21 +174,6 @@ def parse_article(html, url):
 
     headline_tag = soup.select_one(".details h1")
 
-    # "#rpt" is the site's own byline/credit slot just under the headline
-    # (e.g. "UNB", "Online Desk") - a news-agency/desk credit rather than a
-    # personal byline, but it's the closest thing to an author this site
-    # exposes, same role as author on the other sources.
-    author_tag = soup.select_one("#rpt")
-
-    # Raw text is "Update : 16 November, 2024 10:44 am" - strip the label,
-    # timestamps.py parses what's left. Confirmed live across sections that
-    # the format is inconsistent about 24h-vs-12h ("15:00 pm" as well as
-    # "10:44 am"), so the parser will need to handle both.
-    date_tag = soup.select_one("#news_update_time")
-    date_published = _text(date_tag)
-    if date_published.startswith("Update"):
-        date_published = date_published.split(":", 1)[-1].strip()
-
     image_tag = soup.select_one("img.details_img")
     image_url = urljoin(BASE_URL, image_tag["src"]) if image_tag and image_tag.get("src") else ""
 
@@ -204,8 +188,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join(_text(headline_tag).split())),
-        "author": _normalize(" ".join(_text(author_tag).split())),
-        "date_published": date_published,
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -220,5 +202,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

@@ -22,9 +22,9 @@ class HomeScreen extends StatefulWidget {
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
-  final CategoryFilterStore filterStore;
-  final SourceFilterStore sourceFilterStore;
-  final LanguageFilterStore languageFilterStore;
+  final ExcludedKeysStore filterStore;
+  final ExcludedKeysStore sourceFilterStore;
+  final ExcludedKeysStore languageFilterStore;
 
   const HomeScreen({
     super.key,
@@ -185,10 +185,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       allCategories: _categories,
       excludedKeys: _excludedCategoryKeys,
       onToggle: _handleFilterToggle,
-      allSources: visibleSources(fetchedArticles: _articles, excludedKeys: const {}),
+      allSources: visibleValues(
+        fetchedArticles: _articles,
+        keyOf: (a) => a.source,
+        excludedKeys: const {},
+      ),
       excludedSourceKeys: _excludedSourceKeys,
       onSourceToggle: _handleSourceFilterToggle,
-      allLanguages: visibleLanguages(fetchedArticles: _articles, excludedKeys: const {}),
+      allLanguages: visibleValues(
+        fetchedArticles: _articles,
+        keyOf: (a) => a.language,
+        excludedKeys: const {},
+      ),
       excludedLanguageKeys: _excludedLanguageKeys,
       onLanguageToggle: _handleLanguageFilterToggle,
     );
@@ -456,12 +464,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onPageChanged: _onCategoryPageChanged,
                     itemBuilder: (context, page) {
                       final category = _visibleCategories[page % _visibleCategories.length];
-                      final visibleSourceKeys = visibleSources(
+                      final visibleSourceKeys = visibleValues(
                         fetchedArticles: _articles,
+                        keyOf: (a) => a.source,
                         excludedKeys: _excludedSourceKeys,
                       ).toSet();
-                      final visibleLanguageKeys = visibleLanguages(
+                      final visibleLanguageKeys = visibleValues(
                         fetchedArticles: _articles,
+                        keyOf: (a) => a.language,
                         excludedKeys: _excludedLanguageKeys,
                       ).toSet();
                       return CategoryFeed(
@@ -571,9 +581,7 @@ class _CategoryPill extends StatelessWidget {
         child: Text(
           label,
           style:
-              (Theme.of(context).extension<AppTypography>()?.pillLabel ??
-                      const TextStyle(fontSize: 13))
-                  .copyWith(
+              AppColors.pillLabelStyle.copyWith(
                 color: selected
                     ? Theme.of(context).colorScheme.onPrimary
                     : AppColors.textSecondary,

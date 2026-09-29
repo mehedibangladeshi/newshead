@@ -6,14 +6,12 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, browser_client, config
+from .. import browser_client, config
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.kalerkantho.com"
 COVER_LOGO_URL = "https://asset.kalerkantho.com/files/share_logo.png"
-COVER_ACCENT_COLOR = (176, 30, 36)  # a representative Bangladeshi-daily masthead red; no brand color found on the live page
-
 SOURCE_NAME = "কালের কণ্ঠ"
 
 # Real nav confirmed live at /online/<slug> - "Islamic-lifestylie" is kept
@@ -169,8 +167,6 @@ def parse_article(html, url):
 
     section_area = soup.select_one('[class*="sectionArea"]') or soup
     headline_tag = section_area.select_one("h1")
-    author_tag = section_area.select_one("span.fw-bold.text-dark")
-    time_tag = section_area.select_one("time")
     body_container = section_area.select_one('article[class*="detailsBody"]')
     image_tag = soup.select_one('meta[property="og:image"]')
 
@@ -181,17 +177,9 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    date_published = ""
-    if time_tag is not None:
-        # "প্রকাশ: <date> | আপডেট: <date>" - only the first ("published")
-        # half is a publish instant, the update half is a different event.
-        date_published = re.split(r"\|", time_tag.get_text(" ", strip=True))[0].strip()
-
     return {
         "url": url,
         "headline": headline_tag.get_text(strip=True) if headline_tag else "",
-        "author": author_tag.get_text(strip=True) if author_tag else "",
-        "date_published": date_published,
         "image_url": (image_tag.get("content") or "") if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -204,7 +192,3 @@ def fetch_article(url):
 
 def get_cover_logo_url():
     return COVER_LOGO_URL
-
-
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)

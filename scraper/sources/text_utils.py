@@ -1,4 +1,10 @@
 import unicodedata
+from urllib.parse import urlparse
+
+
+def section_slug(url):
+    path = urlparse(url).path.strip("/")
+    return path.split("/", 1)[0] if path else ""
 
 
 def extract_text(tag, default=""):

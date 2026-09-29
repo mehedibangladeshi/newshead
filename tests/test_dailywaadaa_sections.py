@@ -56,8 +56,6 @@ def test_parse_homepage_include_all_keeps_latest_aggregator():
 def test_parse_article_reads_scoped_body_and_iso_time():
     detail = parse_article(_ARTICLE_HTML, "https://dailywaadaa.com/bangladesh/2026/09/28/rooppur-1")
     assert detail["headline"] == "Rooppur nuclear fuel transport disrupted"
-    assert detail["author"] == "Waadaa Desk"
-    assert detail["date_published"] == "2026-09-28T05:18:50.167Z"
     assert detail["image_url"] == "https://media.assettype.com/photo.jpg"
     assert detail["paragraphs"] == [
         "Uranium transport has been disrupted.",

@@ -60,8 +60,6 @@ def test_parse_articles_reads_flat_headline_summary_readmore_triplet():
 def test_parse_article_splits_byline_from_body_and_skips_section_label():
     detail = parse_article(_ARTICLE_HTML, "https://today.thefinancialexpress.com.bd/editorial/x")
     assert detail["headline"] == "All hell broke loose on Thursday night"
-    assert detail["author"] == "Neil Ray"
-    assert detail["date_published"] == "September 28, 2026 00:00:00"
     assert detail["image_url"] == "https://today.thefinancialexpress.com.bd/uploads/1.jpg"
     assert detail["paragraphs"] == [
         "The country has been a witness to vandalism.",

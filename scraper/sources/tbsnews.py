@@ -1,11 +1,13 @@
+import functools
 import logging
 import time
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
+from .. import config
+from . import text_utils
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -21,7 +23,6 @@ LATEST_URL = f"{BASE_URL}/latest"
 # HTTP 200, image/png) - unlike Daily Star's SVG-only masthead, this one
 # needs no local-asset workaround.
 COVER_LOGO_URL = "https://www.tbsnews.net/sites/all/themes/sloth/logo.png"
-COVER_ACCENT_COLOR = (196, 30, 30)  # the site's recurring section-label red, close to its "TBS red" accent
 
 SOURCE_NAME = "The Business Standard"
 
@@ -86,7 +87,6 @@ _session = config.make_session()
 # The whole /latest feed lives on one URL, so every discover_sections()/
 # list_articles() call in a single run shares one fetch+parse instead of
 # re-requesting the same page once per section.
-_listing_cache = {}
 
 
 def _get(url):
@@ -94,11 +94,6 @@ def _get(url):
     response = _session.get(url, timeout=config.REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.text
-
-
-def _section_slug(url):
-    path = urlparse(url).path.strip("/")
-    return path.split("/", 1)[0] if path else ""
 
 
 def parse_latest(html, include_all=False):
@@ -123,7 +118,7 @@ def parse_latest(html, include_all=False):
         if url in seen_urls:
             continue
 
-        slug = _section_slug(url)
+        slug = text_utils.section_slug(url)
         if not slug or (not include_all and slug in EXCLUDED_SECTION_SLUGS):
             continue
         seen_urls.add(url)
@@ -145,12 +140,10 @@ def parse_latest(html, include_all=False):
     return grouped
 
 
+@functools.lru_cache(maxsize=None)
 def _get_grouped_listing(include_all=False):
-    cache_key = "grouped_all" if include_all else "grouped"
-    if cache_key not in _listing_cache:
-        html = _get(LATEST_URL)
-        _listing_cache[cache_key] = parse_latest(html, include_all=include_all)
-    return _listing_cache[cache_key]
+    html = _get(LATEST_URL)
+    return parse_latest(html, include_all=include_all)
 
 
 def discover_sections(include_all=False):
@@ -170,18 +163,6 @@ def discover_sections(include_all=False):
 def list_articles(slug, edition_date=None):
     grouped = _get_grouped_listing()
     return grouped.get(slug, [])
-
-
-def _extract_author(author_field):
-    # TBS's ld+json represents a multi-byline story (e.g. two reporters) as
-    # a single Person whose own "name" is already a comma-joined string
-    # ("Shaikh Abdullah, Abul Kashem"), unlike Daily Star's list-of-strings
-    # dateline shape - so no list branch is needed here, just dict/string.
-    if isinstance(author_field, dict):
-        return author_field.get("name") or ""
-    if isinstance(author_field, str):
-        return author_field
-    return ""
 
 
 def parse_article(html, url):
@@ -214,8 +195,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join((metadata.get("headline") or "").split())),
-        "author": _normalize(" ".join(_extract_author(metadata.get("author")).split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -230,5 +209,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

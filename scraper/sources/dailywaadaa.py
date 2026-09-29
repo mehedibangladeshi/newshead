@@ -1,3 +1,4 @@
+import functools
 import logging
 import time
 from urllib.parse import urlparse
@@ -5,7 +6,8 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
+from .. import config
+from . import text_utils
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -15,7 +17,6 @@ BASE_URL = "https://dailywaadaa.com"
 COVER_LOGO_URL = (
     "https://images.assettype.com/dailywaadaa/2026-06-08/6dcehos7/DW-web-files-beta-logo.png"
 )
-COVER_ACCENT_COLOR = (72, 96, 188)  # sampled from a section tag's background, #4860BC
 
 SOURCE_NAME = "Daily Waadaa"
 
@@ -60,19 +61,12 @@ FALLBACK_SECTIONS = [
 
 _session = config.make_session()
 
-_listing_cache = {}
-
 
 def _get(url):
     time.sleep(config.REQUEST_DELAY_SECONDS)
     response = _session.get(url, timeout=config.REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.text
-
-
-def _section_slug(url):
-    path = urlparse(url).path.strip("/")
-    return path.split("/", 1)[0] if path else ""
 
 
 def _image_url(img_tag):
@@ -103,7 +97,7 @@ def parse_homepage(html, include_all=False):
         if url in seen_urls:
             continue
 
-        slug = _section_slug(url)
+        slug = text_utils.section_slug(url)
         if not slug or (not include_all and slug in EXCLUDED_SECTION_SLUGS):
             continue
         seen_urls.add(url)
@@ -126,12 +120,10 @@ def parse_homepage(html, include_all=False):
     return grouped
 
 
+@functools.lru_cache(maxsize=None)
 def _get_grouped_listing(include_all=False):
-    cache_key = "grouped_all" if include_all else "grouped"
-    if cache_key not in _listing_cache:
-        html = _get(BASE_URL)
-        _listing_cache[cache_key] = parse_homepage(html, include_all=include_all)
-    return _listing_cache[cache_key]
+    html = _get(BASE_URL)
+    return parse_homepage(html, include_all=include_all)
 
 
 def discover_sections(include_all=False):
@@ -159,8 +151,6 @@ def parse_article(html, url):
     soup = BeautifulSoup(html, "html.parser")
 
     headline_tag = soup.select_one('[data-testid="story-headline"]') or soup.select_one("h1")
-    author_tag = soup.select_one('[data-test-id="author-name"]')
-    time_tag = soup.select_one("time[datetime]")
     image_tag = soup.select_one('meta[property="og:image"]')
 
     paragraphs = []
@@ -173,8 +163,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _text(headline_tag),
-        "author": _normalize(_text(author_tag)),
-        "date_published": time_tag.get("datetime", "") if time_tag else "",
         "image_url": (image_tag.get("content") or "") if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -189,5 +177,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, config
+from .. import config
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.ittefaq.com.bd"
 COVER_LOGO_URL = "https://cdn.ittefaqbd.com/contents/themes/public/style/images/logo.png"
-COVER_ACCENT_COLOR = (236, 28, 36)  # sampled from the site's own CSS accent rule, #ec1c24
 
 SOURCE_NAME = "ইত্তেফাক"
 
@@ -196,13 +195,6 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    author = ""
-    author_field = metadata.get("author")
-    if isinstance(author_field, dict):
-        author = author_field.get("name") or ""
-    elif isinstance(author_field, str):
-        author = author_field
-
     image_url = ""
     image_field = metadata.get("image")
     if isinstance(image_field, dict):
@@ -213,8 +205,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join((metadata.get("headline") or "").split())),
-        "author": _normalize(" ".join(author.split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -229,5 +219,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)

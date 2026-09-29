@@ -57,8 +57,6 @@ def test_parse_articles_reads_card_fields():
 def test_parse_article_reads_headline_author_date_and_body():
     detail = parse_article(_ARTICLE_HTML, "https://netra.news/2026/mandi-village-came-under-attack-en/")
     assert detail["headline"] == "A corpse was found, then a Mandi village came under attack"
-    assert detail["author"] == "Iffat Ara Munia"
-    assert detail["date_published"] == "2026-09-27"
     assert detail["image_url"] == "https://netra.news/og-image.jpg"
     assert detail["paragraphs"] == [
         "A man disappeared from a village in Sherpur.",

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
+from .. import config
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://today.thefinancialexpress.com.bd"
 COVER_LOGO_URL = f"{BASE_URL}/img/logo.png"
-COVER_ACCENT_COLOR = (0, 48, 74)  # sampled from an article headline's inline style, #00304a
 
 SOURCE_NAME = "The Financial Express"
 
@@ -160,29 +159,19 @@ def parse_article(html, url):
     body_container = soup.select_one("div.left-bar")
     image_tag = soup.select_one('meta[property="og:image"]')
 
-    author = ""
-    date_published = ""
     paragraphs = []
     if body_container is not None:
         for p in body_container.find_all("p"):
             text = _text(p)
             if not text or text.startswith("/"):
                 continue
-            match = _BYLINE_RE.match(text)
-            if match:
-                author = match.group("author").strip()
-                date_published = (
-                    f"{match.group('month')} {match.group('day')}, {match.group('year')} "
-                    f"{match.group('hour')}:{match.group('minute')}:{match.group('second')}"
-                )
+            if _BYLINE_RE.match(text):
                 continue
             paragraphs.append(text)
 
     return {
         "url": url,
         "headline": _text(headline_tag),
-        "author": _normalize(author),
-        "date_published": date_published,
         "image_url": (image_tag.get("content") or "").strip() if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -197,5 +186,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

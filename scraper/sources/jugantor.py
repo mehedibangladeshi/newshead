@@ -6,7 +6,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, browser_client, config
+from .. import browser_client, config
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.jugantor.com"
 TODAYS_PAPER_URL = f"{BASE_URL}/todays-paper"
 COVER_LOGO_URL = "https://cdn.jugantor.com/uploads/settings/logo-black.png"
-COVER_ACCENT_COLOR = (196, 12, 19)  # jugantor.com's brand red, #c40c13
 
 SOURCE_NAME = "যুগান্তর"
 
@@ -166,13 +165,6 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    author = ""
-    author_field = metadata.get("author")
-    if isinstance(author_field, dict):
-        author = author_field.get("name") or ""
-    elif isinstance(author_field, str):
-        author = author_field
-
     image_url = ""
     image_field = metadata.get("image")
     if isinstance(image_field, dict):
@@ -183,8 +175,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join((metadata.get("headline") or "").split())),
-        "author": _normalize(" ".join(author.split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -199,5 +189,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)

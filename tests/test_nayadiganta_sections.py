@@ -72,8 +72,6 @@ def test_parse_articles_reads_headline_summary_relative_time_and_thumbnail():
 def test_parse_article_reads_headline_byline_and_body():
     detail = parse_article(_ARTICLE_HTML, "https://www.dailynayadiganta.com/post/country/1056421")
     assert detail["headline"] == "সোনারগাঁওয়ে ট্রলারডুবি"
-    assert detail["author"] == "সোনারগাঁও (নারায়ণগঞ্জ) সংবাদদাতা"
-    assert detail["date_published"] == "প্রকাশ: ২৬ সেপ্টেম্বর ২০২৬, ১১: ৩২"
     assert detail["image_url"] == "https://file.dailynayadiganta.com/og.webp"
     assert detail["paragraphs"] == [
         "নারায়ণগঞ্জের সোনারগাঁওয়ে দুর্ঘটনা ঘটেছে।",

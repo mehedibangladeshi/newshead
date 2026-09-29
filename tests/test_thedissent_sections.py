@@ -63,8 +63,6 @@ def test_parse_articles_scoped_to_section_prefix():
 def test_parse_article_reads_scoped_headline_author_and_body():
     detail = parse_article(_ARTICLE_HTML, "https://thedissent.news/current-affairs/baridhara-road-crash")
     assert detail["headline"] == "Baridhara Road Crash Death"
-    assert detail["author"] == "Azaharul Islam"
-    assert detail["date_published"] == "24 September 2026"
     assert detail["image_url"] == "https://static.thedissent.news/image.jpg"
     assert detail["paragraphs"] == [
         "The truck driver was seventeen years old.",

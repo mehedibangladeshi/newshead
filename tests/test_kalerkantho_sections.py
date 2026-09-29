@@ -66,7 +66,5 @@ def test_parse_articles_reads_stretched_link_headline_and_time():
 def test_parse_article_takes_only_published_half_of_the_publish_update_time():
     detail = parse_article(_ARTICLE_HTML, "https://www.kalerkantho.com/online/national/2026/09/28/1745298")
     assert detail["headline"] == "প্রধানমন্ত্রীর সঙ্গে চীনা রাষ্ট্রদূতের বিদায়ি সাক্ষাৎ"
-    assert detail["author"] == "অনলাইন ডেস্ক"
-    assert detail["date_published"] == "প্রকাশ: ২৮ সেপ্টেম্বর, ২০২৬ ১৪:২৪"
     assert detail["image_url"] == "https://asset.kalerkantho.com/news_images/1.jpg"
     assert detail["paragraphs"] == ["প্রধানমন্ত্রী তারেক রহমানের সঙ্গে বিদায়ি সাক্ষাৎ করেছেন।"]

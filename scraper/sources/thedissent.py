@@ -1,12 +1,11 @@
 import logging
 import time
-from datetime import datetime
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
+from .. import config
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
 
@@ -14,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://thedissent.news"
 COVER_LOGO_URL = "https://asset.thedissent.news/assets/images/logo.svg"
-COVER_ACCENT_COLOR = (0, 0, 0)  # the site's masthead/wordmark is plain black-on-white
 
 SOURCE_NAME = "The Dissent"
 
@@ -143,8 +141,6 @@ def parse_article(html, url):
 
     article_container = soup.select_one('[class^="_article_"]') or soup
     headline_tag = article_container.select_one('h4[class^="_title_"]')
-    author_tag = article_container.select_one('[class^="_author-name_"]')
-    date_tag = article_container.select_one('[class^="_date_"]')
     body_container = article_container.select_one('[class^="_body_"]')
     image_tag = soup.select_one('meta[property="og:image"]')
 
@@ -158,8 +154,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _text(headline_tag),
-        "author": _normalize(_text(author_tag).removeprefix("By")),
-        "date_published": _text(date_tag),
         "image_url": (image_tag.get("content") or "") if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -174,5 +168,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

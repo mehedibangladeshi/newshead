@@ -1,11 +1,13 @@
+import functools
 import logging
 import time
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
+from .. import config
+from . import text_utils
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -24,7 +26,6 @@ BASE_URL = "https://bdnews24.com"
 ARCHIVE_URL = f"{BASE_URL}/archive"
 
 COVER_LOGO_URL = "https://bdnews24.com/frontend/assets/images/common/b-logo.png"
-COVER_ACCENT_COLOR = (0, 0, 0)  # masthead wordmark is plain black-on-white
 
 SOURCE_NAME = "bdnews24.com"
 
@@ -107,7 +108,6 @@ _session = config.make_session()
 # The whole /archive feed lives on two fixed URLs (see ARCHIVE_PAGE_URLS),
 # so every discover_sections()/list_articles() call in a single run shares
 # one pair of fetches+parses instead of re-requesting them once per section.
-_listing_cache = {}
 
 
 def _get(url):
@@ -115,11 +115,6 @@ def _get(url):
     response = _session.get(url, timeout=config.REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.text
-
-
-def _section_slug(url):
-    path = urlparse(url).path.strip("/")
-    return path.split("/", 1)[0] if path else ""
 
 
 def parse_archive(html, include_all=False):
@@ -139,7 +134,7 @@ def parse_archive(html, include_all=False):
             continue
 
         url = urljoin(BASE_URL, card["href"])
-        slug = _section_slug(url)
+        slug = text_utils.section_slug(url)
         if not slug or (not include_all and slug in EXCLUDED_SECTION_SLUGS):
             continue
 
@@ -174,19 +169,17 @@ def _merge_grouped(pages):
     return merged
 
 
+@functools.lru_cache(maxsize=None)
 def _get_grouped_listing(include_all=False):
-    cache_key = "grouped_all" if include_all else "grouped"
-    if cache_key not in _listing_cache:
-        pages = []
-        for url in ARCHIVE_PAGE_URLS:
-            try:
-                html = _get(url)
-            except requests.RequestException:
-                logger.warning("Could not reach %s, skipping this archive page", url)
-                continue
-            pages.append(parse_archive(html, include_all=include_all))
-        _listing_cache[cache_key] = _merge_grouped(pages)
-    return _listing_cache[cache_key]
+    pages = []
+    for url in ARCHIVE_PAGE_URLS:
+        try:
+            html = _get(url)
+        except requests.RequestException:
+            logger.warning("Could not reach %s, skipping this archive page", url)
+            continue
+        pages.append(parse_archive(html, include_all=include_all))
+    return _merge_grouped(pages)
 
 
 def discover_sections(include_all=False):
@@ -217,16 +210,6 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    # The ld+json "author" field is unreliable on bdnews24 - on every
-    # article checked live it's a bug that just repeats the headline
-    # instead of a byline (same bug as the sibling bdnews24bangla module).
-    # The real byline lives in the DOM instead, in the first span.author
-    # inside div.detail-author-name (e.g. "Staff Correspondent", "Reuters");
-    # a second span.author sometimes present right after it is always just
-    # the outlet's own name ("bdnews24.com"), not a byline, so only the
-    # first one is used.
-    author = _text(soup.select_one("div.detail-author-name span.author"))
-
     headline = _text(soup.select_one("h1")) or metadata.get("headline") or ""
 
     image_url = ""
@@ -239,8 +222,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join(headline.split())),
-        "author": _normalize(" ".join(author.split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -255,5 +236,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

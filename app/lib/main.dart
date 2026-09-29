@@ -37,9 +37,9 @@ Future<void> main() async {
   final documentsDir = await getApplicationDocumentsDirectory();
   final cache = FileArticleCache('${documentsDir.path}/articles_cache.json');
   final client = http.Client();
-  final filterStore = SharedPreferencesCategoryFilterStore();
-  final sourceFilterStore = SharedPreferencesSourceFilterStore();
-  final languageFilterStore = SharedPreferencesLanguageFilterStore();
+  final filterStore = SharedPreferencesKeySetStore(kExcludedCategoryKeysPref);
+  final sourceFilterStore = SharedPreferencesKeySetStore(kExcludedSourceKeysPref);
+  final languageFilterStore = SharedPreferencesKeySetStore(kExcludedLanguageKeysPref);
 
   final result = await fetchArticles(
     sourceUrl: kArticlesUrl,
@@ -69,9 +69,9 @@ class NewsHeadApp extends StatelessWidget {
   final Uri sourceUrl;
   final http.Client client;
   final ArticleCache cache;
-  final CategoryFilterStore filterStore;
-  final SourceFilterStore sourceFilterStore;
-  final LanguageFilterStore languageFilterStore;
+  final ExcludedKeysStore filterStore;
+  final ExcludedKeysStore sourceFilterStore;
+  final ExcludedKeysStore languageFilterStore;
 
   const NewsHeadApp({
     super.key,

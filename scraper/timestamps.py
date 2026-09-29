@@ -85,7 +85,7 @@ _MONTH_ABBREV_TO_NUM = {
 # and _parse_dhakapost_absolute() only applies the am/pm adjustment when the
 # hour is still in 12-hour range, so a genuine 24-hour value like 15 is left
 # alone regardless of the trailing am/pm text.
-_DHAKAPOST_ABSOLUTE_RE = re.compile(
+DHAKAPOST_ABSOLUTE_RE = re.compile(
     r"(?P<day>\d{1,2})\s+(?P<month>[A-Za-z]+),\s*(?P<year>\d{4})\s+"
     r"(?P<hour>\d{1,2}):(?P<minute>\d{2})\s*(?P<ampm>[AaPp][Mm])"
 )
@@ -272,7 +272,7 @@ def _parse_dhakapost_absolute(raw):
     applied when the hour is still ambiguous (1-12)."""
     if not raw or not isinstance(raw, str):
         return None
-    match = _DHAKAPOST_ABSOLUTE_RE.search(raw)
+    match = DHAKAPOST_ABSOLUTE_RE.search(raw)
     if not match:
         return None
     try:
@@ -354,22 +354,20 @@ def _parse_bengali_relative(raw, anchor):
     return anchor - timedelta(seconds=total_seconds)
 
 
+_ISO_OFFSET_SOURCES = ("dhakatribune", "ittefaq", "banglatribune", "dailywaadaa", "netranews")
+
 _SOURCE_PARSERS = {
-    "dhakatribune": lambda raw, anchor: _parse_iso_offset(raw),
-    "ittefaq": lambda raw, anchor: _parse_iso_offset(raw),
+    **{name: (lambda raw, anchor: _parse_iso_offset(raw)) for name in _ISO_OFFSET_SOURCES},
     "prothomalo": lambda raw, anchor: _parse_epoch_ms(raw),
     "jugantor": lambda raw, anchor: _parse_bengali_absolute(raw),
     "dailystar": lambda raw, anchor: _parse_relative_english(raw, anchor),
-    "banglatribune": lambda raw, anchor: _parse_iso_offset(raw),
     "tbsnews": lambda raw, anchor: _parse_relative_abbrev(raw, anchor),
     "samakal": lambda raw, anchor: _parse_bengali_absolute_24h(raw),
     "bdnews24": lambda raw, anchor: _parse_bdnews24_published(raw),
     "dhakapost": lambda raw, anchor: _parse_dhakapost_absolute(raw),
-    "dailywaadaa": lambda raw, anchor: _parse_iso_offset(raw),
     "thedissent": lambda raw, anchor: _parse_english_date_only(raw),
     "nayadiganta": lambda raw, anchor: _parse_bengali_relative(raw, anchor),
     "kalerkantho": lambda raw, anchor: _parse_bengali_absolute_24h_flexible(raw),
-    "netranews": lambda raw, anchor: _parse_iso_offset(raw),
     # bdnews24bangla's and financialexpress's listing cards carry no time
     # signal at all (confirmed live: always an empty string) - left
     # unregistered, which already returns None safely via the .get() below.

@@ -115,8 +115,6 @@ def test_parse_article_prefers_dom_byline_over_buggy_ld_json_author():
     article = parse_article(_ARTICLE_HTML, "https://bangla.bdnews24.com/bangladesh/db558adec64d")
     assert article["url"] == "https://bangla.bdnews24.com/bangladesh/db558adec64d"
     assert article["headline"] == "Real headline"
-    assert article["author"] == "নিজস্ব প্রতিবেদক"
-    assert article["date_published"] == "2026-08-24 23:33:01"
     assert article["image_url"] == "https://media-stg.assettype.com/cover.jpg"
     assert article["paragraphs"] == [
         "First paragraph of real prose.",

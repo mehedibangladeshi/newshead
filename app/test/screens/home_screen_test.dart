@@ -19,31 +19,9 @@ class InMemoryArticleCache implements ArticleCache {
   Future<void> write(String contents) async => stored = contents;
 }
 
-class InMemoryCategoryFilterStore implements CategoryFilterStore {
+class InMemoryExcludedKeysStore implements ExcludedKeysStore {
   Set<String> stored;
-  InMemoryCategoryFilterStore([Set<String>? initial]) : stored = initial ?? {};
-
-  @override
-  Future<Set<String>> readExcludedKeys() async => stored;
-
-  @override
-  Future<void> writeExcludedKeys(Set<String> keys) async => stored = keys;
-}
-
-class InMemorySourceFilterStore implements SourceFilterStore {
-  Set<String> stored;
-  InMemorySourceFilterStore([Set<String>? initial]) : stored = initial ?? {};
-
-  @override
-  Future<Set<String>> readExcludedKeys() async => stored;
-
-  @override
-  Future<void> writeExcludedKeys(Set<String> keys) async => stored = keys;
-}
-
-class InMemoryLanguageFilterStore implements LanguageFilterStore {
-  Set<String> stored;
-  InMemoryLanguageFilterStore([Set<String>? initial]) : stored = initial ?? {};
+  InMemoryExcludedKeysStore([Set<String>? initial]) : stored = initial ?? {};
 
   @override
   Future<Set<String>> readExcludedKeys() async => stored;
@@ -118,9 +96,9 @@ void main() {
           sourceUrl: Uri.parse('https://example.com/articles.json'),
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
-          filterStore: InMemoryCategoryFilterStore(),
-          sourceFilterStore: InMemorySourceFilterStore(),
-          languageFilterStore: InMemoryLanguageFilterStore(),
+          filterStore: InMemoryExcludedKeysStore(),
+          sourceFilterStore: InMemoryExcludedKeysStore(),
+          languageFilterStore: InMemoryExcludedKeysStore(),
         ),
       ),
     );
@@ -143,9 +121,9 @@ void main() {
           sourceUrl: Uri.parse('https://example.com/articles.json'),
           client: client,
           cache: InMemoryArticleCache(),
-          filterStore: InMemoryCategoryFilterStore(),
-          sourceFilterStore: InMemorySourceFilterStore(),
-          languageFilterStore: InMemoryLanguageFilterStore(),
+          filterStore: InMemoryExcludedKeysStore(),
+          sourceFilterStore: InMemoryExcludedKeysStore(),
+          languageFilterStore: InMemoryExcludedKeysStore(),
         ),
       ),
     );
@@ -175,9 +153,9 @@ void main() {
           sourceUrl: Uri.parse('https://example.com/articles.json'),
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
-          filterStore: InMemoryCategoryFilterStore(),
-          sourceFilterStore: InMemorySourceFilterStore(),
-          languageFilterStore: InMemoryLanguageFilterStore(),
+          filterStore: InMemoryExcludedKeysStore(),
+          sourceFilterStore: InMemoryExcludedKeysStore(),
+          languageFilterStore: InMemoryExcludedKeysStore(),
         ),
       ),
     );
@@ -208,9 +186,9 @@ void main() {
           sourceUrl: Uri.parse('https://example.com/articles.json'),
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
-          filterStore: InMemoryCategoryFilterStore({'politics'}),
-          sourceFilterStore: InMemorySourceFilterStore(),
-          languageFilterStore: InMemoryLanguageFilterStore(),
+          filterStore: InMemoryExcludedKeysStore({'politics'}),
+          sourceFilterStore: InMemoryExcludedKeysStore(),
+          languageFilterStore: InMemoryExcludedKeysStore(),
         ),
       ),
     );
@@ -231,9 +209,9 @@ void main() {
           sourceUrl: Uri.parse('https://example.com/articles.json'),
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
-          filterStore: InMemoryCategoryFilterStore(),
-          sourceFilterStore: InMemorySourceFilterStore(),
-          languageFilterStore: InMemoryLanguageFilterStore(),
+          filterStore: InMemoryExcludedKeysStore(),
+          sourceFilterStore: InMemoryExcludedKeysStore(),
+          languageFilterStore: InMemoryExcludedKeysStore(),
         ),
       ),
     );
@@ -254,9 +232,9 @@ void main() {
           sourceUrl: Uri.parse('https://example.com/articles.json'),
           client: MockClient((request) async => http.Response('{}', 200)),
           cache: InMemoryArticleCache(),
-          filterStore: InMemoryCategoryFilterStore(),
-          sourceFilterStore: InMemorySourceFilterStore(),
-          languageFilterStore: InMemoryLanguageFilterStore(),
+          filterStore: InMemoryExcludedKeysStore(),
+          sourceFilterStore: InMemoryExcludedKeysStore(),
+          languageFilterStore: InMemoryExcludedKeysStore(),
         ),
       ),
     );

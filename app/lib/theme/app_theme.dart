@@ -12,9 +12,6 @@ class AppColors {
   /// bars.
   static const background = Color(0xFF121212);
 
-  /// Slightly-elevated dark surface (e.g. a refresh spinner's backdrop).
-  static const surfaceElevated = Color(0xFF1E1E1E);
-
   /// Warm dark surface used for the category filter bottom sheet.
   static const sheetBackground = Color(0xFF171310);
 
@@ -24,42 +21,11 @@ class AppColors {
   static const textPrimary = Colors.white;
   static const textSecondary = Colors.white70;
   static const textTertiary = Colors.white54;
-}
 
-/// Custom text styles that don't map to a standard Material [TextTheme]
-/// role — kept as their own [ThemeExtension] so setting them can't silently
-/// reskin unrelated widgets that default to a shared role (e.g. buttons
-/// defaulting to `labelLarge`).
-@immutable
-class AppTypography extends ThemeExtension<AppTypography> {
-  final TextStyle wordmark;
-  final TextStyle pillLabel;
-
-  const AppTypography({required this.wordmark, required this.pillLabel});
-
-  factory AppTypography.standard() {
-    return AppTypography(
-      wordmark: GoogleFonts.anton(fontSize: 18),
-      pillLabel: GoogleFonts.anton(fontSize: 13),
-    );
-  }
-
-  @override
-  AppTypography copyWith({TextStyle? wordmark, TextStyle? pillLabel}) {
-    return AppTypography(
-      wordmark: wordmark ?? this.wordmark,
-      pillLabel: pillLabel ?? this.pillLabel,
-    );
-  }
-
-  @override
-  AppTypography lerp(ThemeExtension<AppTypography>? other, double t) {
-    if (other is! AppTypography) return this;
-    return AppTypography(
-      wordmark: TextStyle.lerp(wordmark, other.wordmark, t)!,
-      pillLabel: TextStyle.lerp(pillLabel, other.pillLabel, t)!,
-    );
-  }
+  // Anton display font, for the wordmark and category pills only — never for
+  // fetched article headlines/snippets (Anton has no Bengali glyphs).
+  static final TextStyle wordmarkStyle = GoogleFonts.anton(fontSize: 18);
+  static final TextStyle pillLabelStyle = GoogleFonts.anton(fontSize: 13);
 }
 
 /// Status bar / Android nav bar icon styling for the app's single (dark)
@@ -92,6 +58,5 @@ ThemeData buildAppTheme() {
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.sheetBackground,
     ),
-    extensions: [AppTypography.standard()],
   );
 }

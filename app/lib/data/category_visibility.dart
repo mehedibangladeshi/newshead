@@ -16,30 +16,17 @@ List<AppCategory> visibleCategories({
       .toList();
 }
 
-/// Distinct source names present in the currently fetched articles, minus
-/// excluded ones. Order follows first appearance in `fetchedArticles`.
-List<String> visibleSources({
+/// Distinct values of [keyOf] present in the currently fetched articles,
+/// minus excluded ones. Order follows first appearance in `fetchedArticles`.
+List<String> visibleValues({
   required List<NewsArticle> fetchedArticles,
+  required String Function(NewsArticle) keyOf,
   required Set<String> excludedKeys,
 }) {
-  final sources = <String>[];
+  final values = <String>[];
   for (final article in fetchedArticles) {
-    if (!sources.contains(article.source)) sources.add(article.source);
+    final key = keyOf(article);
+    if (!values.contains(key)) values.add(key);
   }
-  return sources.where((s) => !excludedKeys.contains(s)).toList();
-}
-
-/// Distinct language codes present in the currently fetched articles, minus
-/// excluded ones. Order follows first appearance in `fetchedArticles`.
-/// Display labels ("English"/"Bangla") are a UI-layer concern, not this
-/// pure data layer's.
-List<String> visibleLanguages({
-  required List<NewsArticle> fetchedArticles,
-  required Set<String> excludedKeys,
-}) {
-  final languages = <String>[];
-  for (final article in fetchedArticles) {
-    if (!languages.contains(article.language)) languages.add(article.language);
-  }
-  return languages.where((l) => !excludedKeys.contains(l)).toList();
+  return values.where((v) => !excludedKeys.contains(v)).toList();
 }

@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, config
+from .. import config
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://samakal.com"
 COVER_LOGO_URL = "https://samakal.com/frontend/media/common/logo.png"
-COVER_ACCENT_COLOR = (0, 0, 0)  # masthead wordmark is plain black-on-white
 
 SOURCE_NAME = "সমকাল"
 
@@ -183,19 +182,6 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    # The ld+json "author" field is unreliable on Samakal - on many pages
-    # (e.g. the sports desk one used to build this module) it's a bug that
-    # just repeats the headline instead of a byline. The real byline, when
-    # the story has one, lives in div.writter instead; prefer that and only
-    # fall back to ld+json if it's missing.
-    author = _text(soup.select_one("div.writter"))
-    if not author:
-        author_field = metadata.get("author")
-        if isinstance(author_field, dict):
-            author = author_field.get("name") or ""
-        elif isinstance(author_field, str):
-            author = author_field
-
     headline = _text(soup.select_one("h1")) or metadata.get("headline") or ""
 
     image_url = ""
@@ -208,8 +194,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join(headline.split())),
-        "author": _normalize(" ".join(author.split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -224,5 +208,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)

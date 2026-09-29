@@ -1,12 +1,13 @@
+import functools
 import logging
-import os
 import time
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
-from .. import config, english_date
+from .. import config
+from . import text_utils
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -28,7 +29,6 @@ TODAYS_NEWS_URL = f"{BASE_URL}/todays-news"
 # points at the file's raw.githubusercontent.com URL on `main` instead of
 # a local filesystem path.
 COVER_LOGO_URL = "https://raw.githubusercontent.com/mehedibangladeshi/newshead/main/scraper/assets/dailystar-logo.png"
-COVER_ACCENT_COLOR = (4, 13, 51)  # the site's recurring UI navy, #040D33 - its wordmark itself is monochrome
 
 SOURCE_NAME = "The Daily Star"
 
@@ -76,7 +76,6 @@ _session = config.make_session()
 # The whole day's listing lives on one URL, so every discover_sections()/
 # list_articles() call in a single run shares one fetch+parse instead of
 # re-requesting the same page once per section.
-_listing_cache = {}
 
 
 def _get(url):
@@ -84,11 +83,6 @@ def _get(url):
     response = _session.get(url, timeout=config.REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.text
-
-
-def _section_slug(url):
-    path = urlparse(url).path.strip("/")
-    return path.split("/", 1)[0] if path else ""
 
 
 def parse_todays_news(html, include_all=False):
@@ -113,7 +107,7 @@ def parse_todays_news(html, include_all=False):
         if url in seen_urls:
             continue
 
-        slug = _section_slug(url)
+        slug = text_utils.section_slug(url)
         if not slug or (not include_all and slug in EXCLUDED_SECTION_SLUGS):
             continue
         seen_urls.add(url)
@@ -133,12 +127,10 @@ def parse_todays_news(html, include_all=False):
     return grouped
 
 
+@functools.lru_cache(maxsize=None)
 def _get_grouped_listing(include_all=False):
-    cache_key = "grouped_all" if include_all else "grouped"
-    if cache_key not in _listing_cache:
-        html = _get(TODAYS_NEWS_URL)
-        _listing_cache[cache_key] = parse_todays_news(html, include_all=include_all)
-    return _listing_cache[cache_key]
+    html = _get(TODAYS_NEWS_URL)
+    return parse_todays_news(html, include_all=include_all)
 
 
 def discover_sections(include_all=False):
@@ -160,21 +152,6 @@ def list_articles(slug, edition_date=None):
     return grouped.get(slug, [])
 
 
-def _extract_author(author_field):
-    # Seen as a plain string ("The Daily Star" for staff/editorial pieces),
-    # and as a dict whose own "name" is either a plain string or - for
-    # wire-service pieces with a dateline, e.g. ["AFP", "Paris"] - a list of
-    # strings, unlike Jugantor/Dhaka Tribune's plain-string/dict-only shapes.
-    if isinstance(author_field, dict):
-        name = author_field.get("name")
-        if isinstance(name, list):
-            return ", ".join(str(part) for part in name if part)
-        return name or ""
-    if isinstance(author_field, str):
-        return author_field
-    return ""
-
-
 def parse_article(html, url):
     """Pure parsing step for fetch_article; takes raw article-page HTML
     and the article's URL, returns the article detail dict."""
@@ -194,14 +171,11 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    date_tag = soup.select_one("span.text-gray-600.font-medium")
     image_tag = soup.select_one('meta[property="og:image"]')
 
     return {
         "url": url,
         "headline": _normalize(" ".join((metadata.get("headline") or "").split())),
-        "author": _normalize(" ".join(_extract_author(metadata.get("author")).split())),
-        "date_published": _text(date_tag),
         "image_url": (image_tag.get("content") or "") if image_tag else "",
         "paragraphs": paragraphs,
     }
@@ -216,5 +190,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return english_date.format_english_date(edition_date)

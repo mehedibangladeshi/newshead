@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .. import bengali_date, config
+from .. import config
 from .ld_json import select_by_type
 from .text_utils import extract_text as _text
 from .text_utils import normalize_text as _normalize
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://bangla.bdnews24.com"
 COVER_LOGO_URL = "https://bangla.bdnews24.com/frontend/assets/images/common/logo.png"
-COVER_ACCENT_COLOR = (0, 0, 0)  # masthead wordmark is plain black-on-white
 
 SOURCE_NAME = "বিডিনিউজ টোয়েন্টিফোর বাংলা"
 
@@ -208,15 +207,6 @@ def parse_article(html, url):
             if text:
                 paragraphs.append(text)
 
-    # The ld+json "author" field is unreliable here - on every article
-    # checked live it's a bug that just repeats the headline instead of a
-    # byline. The real byline lives in the DOM instead, in the first
-    # span.author inside div.detail-author-name (e.g. "নিজস্ব প্রতিবেদক" /
-    # "স্পোর্টস ডেস্ক"); a second span.author right after it is always just
-    # the outlet's own name ("বিডিনিউজ টোয়েন্টিফোর ডটকম"), not a byline, so
-    # only the first one is used.
-    author = _text(soup.select_one("div.detail-author-name span.author"))
-
     headline = _text(soup.select_one("h1")) or metadata.get("headline") or ""
 
     image_url = ""
@@ -229,8 +219,6 @@ def parse_article(html, url):
     return {
         "url": url,
         "headline": _normalize(" ".join(headline.split())),
-        "author": _normalize(" ".join(author.split())),
-        "date_published": metadata.get("datePublished", ""),
         "image_url": image_url,
         "paragraphs": paragraphs,
     }
@@ -245,5 +233,3 @@ def get_cover_logo_url():
     return COVER_LOGO_URL
 
 
-def format_date(edition_date):
-    return bengali_date.format_bengali_date(edition_date)

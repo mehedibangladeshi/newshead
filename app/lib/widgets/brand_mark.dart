@@ -13,9 +13,7 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typography =
-        Theme.of(context).extension<AppTypography>() ?? AppTypography.standard();
-    final wordmark = typography.wordmark;
+    final wordmark = AppColors.wordmarkStyle;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
