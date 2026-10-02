@@ -2,56 +2,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newshead/models/news_article.dart';
 
 void main() {
-  test('NewsArticle stores all fields as provided', () {
-    const article = NewsArticle(
+  test('toJson/fromJson round-trips including publishedAt', () {
+    final a = NewsArticle(
       id: 'a1',
-      category: 'politics',
-      source: 'Jugantor',
-      headline: 'Sample headline',
-      snippet: 'Sample snippet text.',
-      imageUrl: 'https://example.com/image.jpg',
-      articleUrl: 'https://example.com/article',
-    );
-
-    expect(article.id, 'a1');
-    expect(article.category, 'politics');
-    expect(article.source, 'Jugantor');
-    expect(article.headline, 'Sample headline');
-    expect(article.snippet, 'Sample snippet text.');
-    expect(article.imageUrl, 'https://example.com/image.jpg');
-    expect(article.articleUrl, 'https://example.com/article');
-  });
-
-  test('language defaults to en and publishedAt defaults to null when omitted', () {
-    const article = NewsArticle(
-      id: 'a1',
-      category: 'politics',
+      category: 'main',
       source: 'Jugantor',
       headline: 'H',
       snippet: 'S',
-      imageUrl: 'https://example.com/i.jpg',
-      articleUrl: 'https://example.com/a',
-    );
-
-    expect(article.language, 'en');
-    expect(article.publishedAt, isNull);
-  });
-
-  test('stores language and publishedAt when provided', () {
-    final publishedAt = DateTime.utc(2026, 8, 23, 10, 0);
-    final article = NewsArticle(
-      id: 'a1',
-      category: 'politics',
-      source: 'Jugantor',
-      headline: 'H',
-      snippet: 'S',
-      imageUrl: 'https://example.com/i.jpg',
-      articleUrl: 'https://example.com/a',
+      imageUrl: 'https://e.com/1.jpg',
+      articleUrl: 'https://e.com/a1',
       language: 'bn',
-      publishedAt: publishedAt,
+      publishedAt: DateTime.utc(2026, 8, 23, 10),
     );
+    final b = NewsArticle.fromJson(a.toJson());
+    expect(b.toJson(), a.toJson());
+    expect(b.publishedAt, a.publishedAt);
+  });
 
-    expect(article.language, 'bn');
-    expect(article.publishedAt, publishedAt);
+  test('null publishedAt round-trips and missing required field throws', () {
+    const a = NewsArticle(
+      id: 'a1', category: 'main', source: 's', headline: 'h', snippet: '',
+      imageUrl: 'i', articleUrl: 'u',
+    );
+    expect(NewsArticle.fromJson(a.toJson()).publishedAt, isNull);
+    expect(() => NewsArticle.fromJson({'id': 'x'}), throwsA(anything));
   });
 }

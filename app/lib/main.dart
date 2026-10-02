@@ -7,7 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 import 'data/article_cache.dart';
 import 'data/article_repository.dart';
+import 'data/auto_scroll.dart';
 import 'data/category_filter_store.dart';
+import 'data/saved_articles_store.dart';
 import 'models/app_category.dart';
 import 'models/news_article.dart';
 import 'screens/home_screen.dart';
@@ -58,6 +60,8 @@ Future<void> main() async {
     filterStore: filterStore,
     sourceFilterStore: sourceFilterStore,
     languageFilterStore: languageFilterStore,
+    savedStore: const SharedPreferencesSavedArticlesStore(),
+    autoScrollStore: const SharedPreferencesAutoScrollStore(),
   ));
 }
 
@@ -72,6 +76,8 @@ class NewsHeadApp extends StatelessWidget {
   final ExcludedKeysStore filterStore;
   final ExcludedKeysStore sourceFilterStore;
   final ExcludedKeysStore languageFilterStore;
+  final SavedArticlesStore savedStore;
+  final AutoScrollStore autoScrollStore;
 
   const NewsHeadApp({
     super.key,
@@ -85,6 +91,8 @@ class NewsHeadApp extends StatelessWidget {
     required this.filterStore,
     required this.sourceFilterStore,
     required this.languageFilterStore,
+    required this.savedStore,
+    required this.autoScrollStore,
   });
 
   @override
@@ -103,6 +111,8 @@ class NewsHeadApp extends StatelessWidget {
         filterStore: filterStore,
         sourceFilterStore: sourceFilterStore,
         languageFilterStore: languageFilterStore,
+        savedStore: savedStore,
+        autoScrollStore: autoScrollStore,
       ),
     );
   }

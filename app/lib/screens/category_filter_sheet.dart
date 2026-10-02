@@ -31,6 +31,8 @@ Future<void> showCategoryFilterSheet({
   required List<String> allLanguages,
   required Set<String> excludedLanguageKeys,
   required void Function(String languageKey, bool isChecked) onLanguageToggle,
+  DateTime? lastUpdated,
+  Future<bool> Function()? onRefresh,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -48,8 +50,19 @@ Future<void> showCategoryFilterSheet({
       allLanguages: allLanguages,
       excludedLanguageKeys: excludedLanguageKeys,
       onLanguageToggle: onLanguageToggle,
+      lastUpdated: lastUpdated,
+      onRefresh: onRefresh,
     ),
   );
+}
+
+String _updatedLabel(DateTime? t) {
+  if (t == null) return 'Not updated yet';
+  final d = DateTime.now().difference(t);
+  if (d.inMinutes < 1) return 'Updated just now';
+  if (d.inMinutes < 60) return 'Updated ${d.inMinutes}m ago';
+  if (d.inHours < 24) return 'Updated ${d.inHours}h ago';
+  return 'Updated ${d.inDays}d ago';
 }
 
 class CategoryFilterSheet extends StatefulWidget {
@@ -62,9 +75,14 @@ class CategoryFilterSheet extends StatefulWidget {
   final List<String> allLanguages;
   final Set<String> excludedLanguageKeys;
   final void Function(String languageKey, bool isChecked) onLanguageToggle;
+  final DateTime? lastUpdated;
+  // Resolves true when fresh data came from the network.
+  final Future<bool> Function()? onRefresh;
 
   const CategoryFilterSheet({
     super.key,
+    this.lastUpdated,
+    this.onRefresh,
     required this.allCategories,
     required this.excludedKeys,
     required this.onToggle,
@@ -84,6 +102,17 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
   late Set<String> _excludedKeys;
   late Set<String> _excludedSourceKeys;
   late Set<String> _excludedLanguageKeys;
+  bool _refreshing = false;
+  DateTime? _justRefreshed;
+
+  Future<void> _refresh() async {
+    setState(() => _refreshing = true);
+    try {
+      if (await widget.onRefresh!()) _justRefreshed = DateTime.now();
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
 
   @override
   void initState() {
@@ -91,6 +120,40 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
     _excludedKeys = {...widget.excludedKeys};
     _excludedSourceKeys = {...widget.excludedSourceKeys};
     _excludedLanguageKeys = {...widget.excludedLanguageKeys};
+  }
+
+  Widget _refreshRow() {
+    const accent = AppColors.accent;
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _updatedLabel(_justRefreshed ?? widget.lastUpdated),
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
+            ),
+          ),
+          TextButton.icon(
+            key: const Key('sheetRefreshButton'),
+            onPressed: _refreshing ? null : _refresh,
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              minimumSize: const Size(0, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            icon: _refreshing
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                  )
+                : const Icon(Icons.refresh, size: 16),
+            label: Text(_refreshing ? 'Refreshing…' : 'Refresh'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -123,29 +186,13 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
               "Unchecked items are hidden right away. Your picks stay put next time you open the app.",
               style: TextStyle(color: AppColors.textTertiary, fontSize: 11.5),
             ),
+            if (widget.onRefresh != null) _refreshRow(),
             const SizedBox(height: 10),
             ConstrainedBox(
               constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  _FilterSection(
-                    label: 'Language',
-                    itemKeys: widget.allLanguages,
-                    itemLabels: {for (final l in widget.allLanguages) l: languageLabel(l)},
-                    excludedKeys: _excludedLanguageKeys,
-                    onToggle: (key, isChecked) {
-                      setState(() {
-                        if (isChecked) {
-                          _excludedLanguageKeys.remove(key);
-                        } else {
-                          _excludedLanguageKeys.add(key);
-                        }
-                      });
-                      widget.onLanguageToggle(key, isChecked);
-                    },
-                  ),
-                  const SizedBox(height: 14),
                   _FilterSection(
                     label: 'Categories',
                     initiallyExpanded: true,
@@ -161,6 +208,23 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                         }
                       });
                       widget.onToggle(key, isChecked);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _FilterSection(
+                    label: 'Language',
+                    itemKeys: widget.allLanguages,
+                    itemLabels: {for (final l in widget.allLanguages) l: languageLabel(l)},
+                    excludedKeys: _excludedLanguageKeys,
+                    onToggle: (key, isChecked) {
+                      setState(() {
+                        if (isChecked) {
+                          _excludedLanguageKeys.remove(key);
+                        } else {
+                          _excludedLanguageKeys.add(key);
+                        }
+                      });
+                      widget.onLanguageToggle(key, isChecked);
                     },
                   ),
                   const SizedBox(height: 14),

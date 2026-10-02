@@ -10,6 +10,9 @@ class InMemoryArticleCache implements ArticleCache {
   InMemoryArticleCache([this.stored]);
 
   @override
+  Future<DateTime?> savedAt() async => null;
+
+  @override
   Future<String?> read() async => stored;
 
   @override
@@ -22,6 +25,9 @@ class InMemoryArticleCache implements ArticleCache {
 class ThrowingWriteArticleCache implements ArticleCache {
   String? stored;
   ThrowingWriteArticleCache([this.stored]);
+
+  @override
+  Future<DateTime?> savedAt() async => null;
 
   @override
   Future<String?> read() async => stored;

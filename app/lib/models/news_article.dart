@@ -20,4 +20,33 @@ class NewsArticle {
     this.language = 'en',
     this.publishedAt,
   });
+
+  /// Throws (TypeError) on a missing/mistyped required field; callers that
+  /// read untrusted lists catch and skip.
+  factory NewsArticle.fromJson(Map<String, dynamic> map) {
+    final publishedAt = map['publishedAt'];
+    return NewsArticle(
+      id: map['id'] as String,
+      category: map['category'] as String,
+      source: map['source'] as String,
+      headline: map['headline'] as String,
+      snippet: (map['snippet'] as String?) ?? '',
+      imageUrl: map['imageUrl'] as String,
+      articleUrl: map['articleUrl'] as String,
+      language: map['language'] is String ? map['language'] as String : 'en',
+      publishedAt: publishedAt is String ? DateTime.tryParse(publishedAt) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'category': category,
+    'source': source,
+    'headline': headline,
+    'snippet': snippet,
+    'imageUrl': imageUrl,
+    'articleUrl': articleUrl,
+    'language': language,
+    'publishedAt': publishedAt?.toIso8601String(),
+  };
 }

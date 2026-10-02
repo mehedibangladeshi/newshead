@@ -9,10 +9,16 @@ import '../theme/app_theme.dart';
 class NewsCard extends StatelessWidget {
   final NewsArticle article;
   final ImageProvider Function(String url) imageProviderBuilder;
+  final bool isSaved;
+  final VoidCallback? onToggleSave;
+  final VoidCallback? onShare;
 
   NewsCard({
     super.key,
     required this.article,
+    this.isSaved = false,
+    this.onToggleSave,
+    this.onShare,
     ImageProvider Function(String url)? imageProviderBuilder,
   }) : imageProviderBuilder =
            imageProviderBuilder ?? ((url) => NetworkImage(url));
@@ -36,7 +42,8 @@ class NewsCard extends StatelessWidget {
 
   static const _pillHeight =
       _pillFontSize * _kLineHeightFactor + _pillVerticalPadding * 2;
-  static const _timestampRowHeight = _timestampFontSize * _kLineHeightFactor;
+  static const _timestampTextHeight = _timestampFontSize * _kLineHeightFactor;
+  static const _actionButtonSize = 32.0; // tight IconButton box (see _actionButton)
 
   static const _pillTextStyle = TextStyle(
     color: AppColors.textPrimary,
@@ -142,6 +149,7 @@ class NewsCard extends StatelessWidget {
     final availableWidth =
         textConstraints.maxWidth - _kOuterPadding.horizontal;
     final hasTimestamp = article.publishedAt != null;
+    final hasActions = onToggleSave != null || onShare != null;
 
     final headlineHeight = _measureHeight(
       text: article.headline,
@@ -151,8 +159,8 @@ class NewsCard extends StatelessWidget {
     );
 
     var headBlockHeight = _pillHeight + 10 + headlineHeight;
-    if (hasTimestamp) {
-      headBlockHeight += 6 + _timestampRowHeight;
+    if (hasTimestamp || hasActions) {
+      headBlockHeight += 6 + (hasActions ? _actionButtonSize : _timestampTextHeight);
     }
     headBlockHeight += 8; // spacing before the snippet block
 
@@ -177,7 +185,7 @@ class NewsCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ..._buildHeadBlock(hasTimestamp),
+            ..._buildHeadBlock(hasTimestamp, hasActions),
             _buildSnippetBlock(
               context: context,
               availableWidth: availableWidth,
@@ -192,7 +200,7 @@ class NewsCard extends StatelessWidget {
 
   // The source pill, headline, and (if present) the timestamp row: fixed,
   // never-scrollable, never-truncated content.
-  List<Widget> _buildHeadBlock(bool hasTimestamp) {
+  List<Widget> _buildHeadBlock(bool hasTimestamp, bool hasActions) {
     return [
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -204,26 +212,67 @@ class NewsCard extends StatelessWidget {
       ),
       const SizedBox(height: 10),
       Text(article.headline, style: _headlineTextStyle),
-      if (hasTimestamp) ...[
+      if (hasTimestamp || hasActions) ...[
         const SizedBox(height: 6),
         Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.access_time,
-              size: _timestampIconSize,
-              color: AppColors.textTertiary,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              formatPublishedAt(article.publishedAt!, article.language),
-              style: _timestampTextStyle,
-            ),
+            if (hasTimestamp) ...[
+              const Icon(
+                Icons.access_time,
+                size: _timestampIconSize,
+                color: AppColors.textTertiary,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                formatPublishedAt(article.publishedAt!, article.language),
+                style: _timestampTextStyle,
+              ),
+            ],
+            const Spacer(),
+            if (onToggleSave != null)
+              _actionButton(
+                key: const Key('saveButton'),
+                icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                color: isSaved ? AppColors.accent : AppColors.textSecondary,
+                tooltip: isSaved ? 'Remove from saved' : 'Save',
+                onPressed: onToggleSave!,
+              ),
+            if (onShare != null)
+              _actionButton(
+                key: const Key('shareButton'),
+                icon: Icons.share_outlined,
+                color: AppColors.textSecondary,
+                tooltip: 'Share',
+                onPressed: onShare!,
+              ),
           ],
         ),
       ],
       const SizedBox(height: 8),
     ];
+  }
+
+  Widget _actionButton({
+    required Key key,
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return IconButton(
+      key: key,
+      icon: Icon(icon, color: color, size: 20),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      padding: EdgeInsets.zero,
+      // Material 3 ignores `constraints`; fixedSize is what actually pins the box.
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(_actionButtonSize),
+        minimumSize: const Size.square(_actionButtonSize),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
+    );
   }
 
   // Measures whether the full snippet text fits in the space left after the

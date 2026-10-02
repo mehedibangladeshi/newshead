@@ -15,6 +15,9 @@ class AppColors {
   /// Warm dark surface used for the category filter bottom sheet.
   static const sheetBackground = Color(0xFF171310);
 
+  /// Warm elevated surface for snackbars, one step above sheetBackground.
+  static const toastSurface = Color(0xFF2A2420);
+
   /// The brand red, taken from the app icon/wordmark lockup.
   static const accent = Color(0xFFE1483A);
 
@@ -57,6 +60,19 @@ ThemeData buildAppTheme() {
     ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.sheetBackground,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: AppColors.toastSurface,
+      contentTextStyle: const TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      actionTextColor: AppColors.accent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 6,
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
     ),
   );
 }

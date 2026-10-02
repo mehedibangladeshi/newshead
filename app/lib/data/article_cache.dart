@@ -3,6 +3,8 @@ import 'dart:io';
 abstract class ArticleCache {
   Future<String?> read();
   Future<void> write(String contents);
+  // When the cache was last written; null if never.
+  Future<DateTime?> savedAt();
 }
 
 class FileArticleCache implements ArticleCache {
@@ -25,5 +27,11 @@ class FileArticleCache implements ArticleCache {
   Future<void> write(String contents) async {
     final file = File(path);
     await file.writeAsString(contents);
+  }
+
+  @override
+  Future<DateTime?> savedAt() async {
+    final file = File(path);
+    return await file.exists() ? file.lastModified() : null;
   }
 }

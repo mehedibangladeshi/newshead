@@ -104,4 +104,89 @@ void main() {
 
     expect(find.byIcon(Icons.access_time), findsNothing);
   });
+
+  Widget card({
+    NewsArticle a = article,
+    bool isSaved = false,
+    VoidCallback? onToggleSave,
+    VoidCallback? onShare,
+  }) =>
+      MaterialApp(
+        home: NewsCard(
+          article: a,
+          isSaved: isSaved,
+          onToggleSave: onToggleSave,
+          onShare: onShare,
+          imageProviderBuilder: (_) => FailingImageProvider(),
+        ),
+      );
+
+  testWidgets('action icons are absent without callbacks', (tester) async {
+    await tester.pumpWidget(card());
+    await tester.pump();
+
+    expect(find.byKey(const Key('saveButton')), findsNothing);
+    expect(find.byKey(const Key('shareButton')), findsNothing);
+  });
+
+  testWidgets('action icons render and fire their callbacks without triggering parent tap', (tester) async {
+    var saves = 0, shares = 0, parentTaps = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: GestureDetector(
+        onTap: () => parentTaps++,
+        child: NewsCard(
+          article: article,
+          onToggleSave: () => saves++,
+          onShare: () => shares++,
+          imageProviderBuilder: (_) => FailingImageProvider(),
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('saveButton')));
+    await tester.tap(find.byKey(const Key('shareButton')));
+    expect([saves, shares, parentTaps], [1, 1, 0]);
+  });
+
+  testWidgets('shows a filled bookmark when saved', (tester) async {
+    await tester.pumpWidget(card(isSaved: true, onToggleSave: () {}));
+    await tester.pump();
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
+
+    await tester.pumpWidget(card(onToggleSave: () {}));
+    await tester.pump();
+    expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+  });
+
+  testWidgets('null publishedAt with callbacks shows icons but no clock', (tester) async {
+    await tester.pumpWidget(card(onToggleSave: () {}, onShare: () {}));
+    await tester.pump();
+
+    expect(find.byKey(const Key('saveButton')), findsOneWidget);
+    expect(find.byKey(const Key('shareButton')), findsOneWidget);
+    expect(find.byIcon(Icons.access_time), findsNothing);
+  });
+
+  testWidgets('no overflow on a small surface with long text and actions', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final long = NewsArticle(
+      id: 'a4',
+      category: 'politics',
+      source: 'Jugantor',
+      headline: List.filled(30, 'Long headline words').join(' '),
+      snippet: List.filled(200, 'snippet words').join(' '),
+      imageUrl: 'https://example.com/image.jpg',
+      articleUrl: 'https://example.com/article',
+      language: 'en',
+      publishedAt: DateTime.now().subtract(const Duration(hours: 2)),
+    );
+    await tester.pumpWidget(card(a: long, onToggleSave: () {}, onShare: () {}));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('saveButton')), findsOneWidget);
+  });
 }

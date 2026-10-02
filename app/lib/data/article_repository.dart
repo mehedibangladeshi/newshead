@@ -29,11 +29,6 @@ List<AppCategory> parseCategories(String jsonString) {
   return categories.isEmpty ? kDefaultCategories : categories;
 }
 
-DateTime? _tryParsePublishedAt(Object? raw) {
-  if (raw is! String) return null;
-  return DateTime.tryParse(raw);
-}
-
 List<NewsArticle> parseArticles(String jsonString) {
   final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
   final rawArticles = decoded['articles'] as List<dynamic>? ?? [];
@@ -41,18 +36,7 @@ List<NewsArticle> parseArticles(String jsonString) {
   final articles = <NewsArticle>[];
   for (final raw in rawArticles) {
     try {
-      final map = raw as Map<String, dynamic>;
-      articles.add(NewsArticle(
-        id: map['id'] as String,
-        category: map['category'] as String,
-        source: map['source'] as String,
-        headline: map['headline'] as String,
-        snippet: (map['snippet'] as String?) ?? '',
-        imageUrl: map['imageUrl'] as String,
-        articleUrl: map['articleUrl'] as String,
-        language: map['language'] is String ? map['language'] as String : 'en',
-        publishedAt: _tryParsePublishedAt(map['publishedAt']),
-      ));
+      articles.add(NewsArticle.fromJson(raw as Map<String, dynamic>));
     } catch (_) {
       continue;
     }

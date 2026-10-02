@@ -24,3 +24,12 @@ The output of the reusable `scripts/discover_sections.py` tool: every raw Source
 **Visible Category**:
 A Canonical Category currently shown as a pill/tab in the app: it exists in the fetched `categories` list, has at least one fetched article, and the user hasn't unchecked it in the category filter. One derived list drives both the pill bar and the swipeable feed — there's no separate concept of a "tab list" versus a "filter list." Always ordered by the fetched `categories` list's own order (`main` first), never re-sorted by the app.
 _Avoid_: Tab, active category (both mean this only in passing — use Visible Category for the app-wide derived list itself)
+
+**Saved Article**:
+An article the reader chose to keep; it is kept as a snapshot so it stays readable after it drops out of the feed. Removing it is the reader's choice; refreshes never remove it. Saved Articles ignore category/language/source filters.
+
+**Auto-scroll**:
+Hands-free advancing through the current Visible Category's feed, off by default and switchable by the reader.
+
+**Dwell**:
+How long a card stays on screen before Auto-scroll advances to the next one; it grows with the card's word count, Bengali reads slower than English, and it is bounded (min 6s, max 20s).
