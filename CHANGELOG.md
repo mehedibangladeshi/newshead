@@ -1,15 +1,18 @@
 # Changelog
 
-## [Unreleased]
+## [1.2.0] - 2026-10-02
 ### Added
 - Save articles (bookmark on card, Saved screen with swipe-to-remove + undo).
-- "Saved" / "Removed from saved" toasts with VIEW / UNDO when bookmarking from the feed.
+- "Saved" / "Removed from saved" toasts with VIEW / UNDO when bookmarking from
+  the feed.
 - Share an article via the system share sheet.
-- Auto-scroll with reading-time-based dwell, toggled by a subtle play/pause button in the bottom-right corner.
+- Auto-scroll with reading-time-based dwell, toggled by a subtle play/pause
+  button in the bottom-right corner.
 - Feed refreshes automatically on app resume when data is over 30 minutes old.
 
 ### Changed
-- Header trimmed to search, filter and saved; manual refresh moved to an "Updated Xh ago · Refresh" row in the filter sheet.
+- Header trimmed to search, filter and saved; manual refresh moved to an
+  "Updated Xh ago · Refresh" row in the filter sheet.
 - Filter sheet sections now ordered Categories → Language → Sources.
 
 ## [1.1.0] - 2026-09-28
